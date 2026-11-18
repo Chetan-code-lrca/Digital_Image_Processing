@@ -131,21 +131,33 @@ def _quadtree_leaves(array, y0, y1, x0, x1, variance_limit, min_size, leaves):
             _quadtree_leaves(array, ya, yb, xa, xb, variance_limit, min_size, leaves)
 
 
-def split_and_merge(image, variance_limit=100, merge_threshold=8, min_size=8):
-    """Split heterogeneous regions into blocks, then merge adjacent similar leaves."""
+def region_split(image, variance_limit=100, min_size=8):
+    """Split heterogeneous grayscale areas into quadtree region labels."""
     gray = to_uint8(image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
-    if variance_limit < 0 or merge_threshold < 0 or min_size < 1:
-        raise ValueError("Thresholds must be non-negative and min_size positive.")
-    rows, cols = gray.shape
+    if variance_limit < 0 or min_size < 1:
+        raise ValueError("variance_limit must be non-negative and min_size positive.")
     leaves = []
-    _quadtree_leaves(gray, 0, rows, 0, cols, variance_limit, min_size, leaves)
+    _quadtree_leaves(gray, 0, gray.shape[0], 0, gray.shape[1],
+                     variance_limit, min_size, leaves)
     labels = np.zeros(gray.shape, dtype=np.int32)
-    means = []
-    for index, (y0, y1, x0, x1, mean) in enumerate(leaves, start=1):
+    for index, (y0, y1, x0, x1, _mean) in enumerate(leaves, start=1):
         labels[y0:y1, x0:x1] = index
-        means.append(mean)
+    return labels
 
-    parent = list(range(len(leaves) + 1))
+
+def region_merge(image, labels, merge_threshold=8):
+    """Merge adjacent regions whose mean grayscale values are sufficiently similar."""
+    gray = to_uint8(image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
+    labels = np.asarray(labels, dtype=np.int32)
+    if labels.shape != gray.shape or np.any(labels < 0):
+        raise ValueError("labels must be a non-negative array with the same shape as image.")
+    if merge_threshold < 0:
+        raise ValueError("merge_threshold must be non-negative.")
+    region_ids = np.unique(labels)
+    if region_ids.size == 0:
+        return np.zeros(gray.shape, dtype=np.int32)
+    means = {int(label): float(gray[labels == label].mean()) for label in region_ids}
+    parent = {int(label): int(label) for label in region_ids}
 
     def find(value):
         while parent[value] != value:
@@ -163,13 +175,20 @@ def split_and_merge(image, variance_limit=100, merge_threshold=8, min_size=8):
         pairs = np.stack([left.ravel(), right.ravel()], axis=1)
         pairs = np.unique(pairs[pairs[:, 0] != pairs[:, 1]], axis=0)
         for first, second in pairs:
-            if abs(means[int(first) - 1] - means[int(second) - 1]) <= merge_threshold:
-                union(int(first), int(second))
+            first, second = int(first), int(second)
+            if abs(means[first] - means[second]) <= merge_threshold:
+                union(first, second)
 
-    roots = {}
+    compact_ids = {}
     merged = np.zeros_like(labels)
-    for old in range(1, len(leaves) + 1):
-        root = find(old)
-        roots.setdefault(root, len(roots) + 1)
-        merged[labels == old] = roots[root]
+    for old in region_ids:
+        root = find(int(old))
+        compact_ids.setdefault(root, len(compact_ids) + 1)
+        merged[labels == old] = compact_ids[root]
     return merged
+
+
+def split_and_merge(image, variance_limit=100, merge_threshold=8, min_size=8):
+    """Split heterogeneous regions, then merge adjacent regions with similar means."""
+    initial_labels = region_split(image, variance_limit=variance_limit, min_size=min_size)
+    return region_merge(image, initial_labels, merge_threshold=merge_threshold)

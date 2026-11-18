@@ -25,6 +25,12 @@ g(x, y) = h(x, y) * f(x, y) + n(x, y)
 
 Here, f is the original image, h is the blur/degradation function, n is noise, and g is the observed image. Restoration estimates f from g and an assumed or estimated degradation model.
 
+## Distortion parameters and filtering procedure
+
+The radial model uses k1 and k2 coefficients, while p1 and p2 represent tangential terms in normalized image coordinates. There is no universal numeric range for these coefficients: meaningful ranges depend on the camera, lens, calibration data, and coordinate normalization. Start with small coefficients for demonstrations and estimate real parameters from calibration images rather than treating example values as physical limits.
+
+A practical restoration procedure is: (1) inspect the degradation, (2) estimate or measure the point-spread function (PSF) and noise model, (3) select a restoration filter, (4) apply the filter, and (5) evaluate the result using MSE/RMSE and visual inspection. Common problems include an unknown PSF, amplified noise, ringing, boundary artifacts, and over-smoothing.
+
 ## Important implementation assumptions
 
 - The least-squares and MAP routines use a known point-spread function (PSF) and a smoothness regularizer in the frequency domain.

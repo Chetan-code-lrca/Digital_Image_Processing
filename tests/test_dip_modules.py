@@ -141,6 +141,10 @@ def test_multilevel_threshold_region_growing_kmeans_split_merge(gray):
     clusters, segmented = kmeans_segmentation(gray, clusters=3)
     assert segmented.shape == gray.shape
     assert len(np.unique(clusters)) <= 3
+    split_labels = region_split(gray, variance_limit=30, min_size=4)
+    merged_labels = region_merge(gray, split_labels, merge_threshold=4)
     split_merged = split_and_merge(gray, variance_limit=30, merge_threshold=4, min_size=4)
+    assert split_labels.shape == gray.shape
+    assert merged_labels.shape == gray.shape
     assert split_merged.shape == gray.shape
     assert len(np.unique(split_merged)) >= 1

@@ -4,6 +4,10 @@
 
 ## Core ideas
 
+Human visual perception is relevant to digital image processing. The cornea and lens focus light onto the retina; rods are more sensitive in low-light conditions and cones support colour vision and finer detail. Brightness adaptation describes how the visual system adjusts to different illumination levels.
+
+Image capture begins with a sensing device that converts incoming energy into a signal. Digitization then samples spatial coordinates and quantizes intensity values. The resulting pixel matrix can be stored, displayed, processed, or transmitted.
+
 A digital image is a discrete two-dimensional signal. Spatial sampling determines the number of pixel locations, while quantization maps measured intensity to a finite set of values. For an 8-bit grayscale image, there are 256 possible gray levels.
 
 ## Topic-to-code map

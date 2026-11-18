@@ -134,7 +134,7 @@ The implementations are organized by syllabus module under **src/dip/**.
 | `module2_enhancement.py` | Linear/nonlinear contrast, GLCM, mean/Gaussian/median/order-statistic filters, image averaging, bilateral smoothing, low/high-pass filtering, sharpening, homomorphic filtering |
 | `module3_restoration.py` | MSE/RMSE, least-squares fitting/restoration, SVD restoration, MAP restoration, homomorphic restoration, radial/tangential distortion |
 | `module4_compression.py` | RLE, Huffman, LZW, arithmetic coding, JPEG encode/decode, vector quantization |
-| `module5_segmentation.py` | Global/Otsu/multilevel/local thresholding, region extraction, region growing, K-Means, split-and-merge |
+| `module5_segmentation.py` | Global/Otsu/multilevel/local thresholding, region extraction, region growing, region splitting/merging, K-Means, split-and-merge |
 
 Example: use the same functions in your own Python script.
 

@@ -35,3 +35,25 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -v
+
+      - name: Smoke-test all 16 practical scripts
+        run: |
+          for practical in \\
+            practical_01_rgb_to_grayscale \\
+            practical_02_resize_image \\
+            practical_03_image_blurring \\
+            practical_04_edge_detection \\
+            practical_05_image_histogram \\
+            practical_06_image_rotation \\
+            practical_07_colour_models \\
+            practical_08_gray_level_transformations \\
+            practical_09_image_transforms \\
+            practical_10_linear_contrast_stretching \\
+            practical_11_frequency_domain_filtering \\
+            practical_12_run_length_encoding \\
+            practical_13_huffman_coding \\
+            practical_14_image_segmentation \\
+            practical_15_image_merging_blending \\
+            practical_16_image_splitting; do
+            python -m "examples.practicals.$practical"
+          done

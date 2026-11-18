@@ -12,7 +12,9 @@
 | Local / adaptive thresholding | local_threshold |
 | Region extraction | extract_regions |
 | Region growing | region_growing |
-| Region splitting and merging | split_and_merge |
+| Region splitting | region_split |
+| Region merging | region_merge |
+| Combined split-and-merge | split_and_merge |
 | Pixel clustering (practical) | kmeans_segmentation |
 
 ## Pixel-based and region-based methods
