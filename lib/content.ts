@@ -103,10 +103,349 @@ export const comparisons = [
 ];
 
 export const codeExamples = [
- {id:"c1",module:"M1" as ModuleId,title:"Read, inspect & convert to grayscale",description:"Load an image, check its shape and convert BGR data to grayscale.",code:"import cv2\n\nimage = cv2.imread('image.jpg')\nif image is None:\n    raise FileNotFoundError('Could not read image.jpg')\ngray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)\nprint('Shape:', image.shape)"},
- {id:"c2",module:"M1" as ModuleId,title:"Histogram equalization",description:"Apply histogram equalization to an 8-bit grayscale image.",code:"import cv2\n\ngray = cv2.imread('image.jpg', cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError('Could not read image.jpg')\nequalized = cv2.equalizeHist(gray)\ncv2.imwrite('equalized.png', equalized)"},
- {id:"c3",module:"M2" as ModuleId,title:"Compare smoothing filters",description:"Compare mean, Gaussian, median and edge-preserving smoothing.",code:"import cv2\n\ngray = cv2.imread('image.jpg', 0)\nif gray is None:\n    raise FileNotFoundError('Could not read image.jpg')\nmean = cv2.blur(gray, (3, 3))\ngaussian = cv2.GaussianBlur(gray, (5, 5), 0)\nmedian = cv2.medianBlur(gray, 3)\nbilateral = cv2.bilateralFilter(gray, 9, 75, 75)"},
- {id:"c4",module:"M3" as ModuleId,title:"Evaluate reconstruction quality",description:"Calculate MSE, RMSE and PSNR for aligned 8-bit images.",code:"import cv2\nimport numpy as np\n\nreference = cv2.imread('reference.png', 0).astype(np.float64)\nrestored = cv2.imread('restored.png', 0).astype(np.float64)\nif reference.shape != restored.shape:\n    raise ValueError('Images must have identical shapes')\nmse = np.mean((reference - restored) ** 2)\nrmse = np.sqrt(mse)\npsnr = float('inf') if mse == 0 else 10 * np.log10(255 ** 2 / mse)"},
- {id:"c5",module:"M4" as ModuleId,title:"Lossy JPEG encode & decode",description:"Encode an image at a selected quality and decode the resulting bytes.",code:"import cv2\n\nimage = cv2.imread('image.jpg')\nif image is None:\n    raise FileNotFoundError('Could not read image.jpg')\nok, encoded = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 85])\nif not ok:\n    raise RuntimeError('JPEG encoding failed')\nreconstructed = cv2.imdecode(encoded, cv2.IMREAD_COLOR)"},
- {id:"c6",module:"M5" as ModuleId,title:"Otsu threshold & connected regions",description:"Segment a grayscale image and extract connected foreground regions.",code:"import cv2\n\nimage = cv2.imread('image.jpg', 0)\nif image is None:\n    raise FileNotFoundError('Could not read image.jpg')\nthreshold, mask = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)\ncount, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)\nprint('Components:', count - 1)"}
-];
+  {
+    "id": "p01",
+    "practical": "01",
+    "module": "M1",
+    "difficulty": "Starter",
+    "title": "RGB / BGR to grayscale",
+    "description": "Convert a colour image into a single intensity channel and inspect its dimensions.",
+    "file": "examples/practicals/practical_01_rgb_to_grayscale.py",
+    "tags": [
+      "colour",
+      "grayscale",
+      "cv2.cvtColor"
+    ],
+    "code": "import cv2\n\nimage = cv2.imread(\"image.jpg\")\nif image is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\ngray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)\nprint(\"Colour shape:\", image.shape)\nprint(\"Grayscale shape:\", gray.shape)\ncv2.imwrite(\"grayscale.png\", gray)"
+  },
+  {
+    "id": "p02",
+    "practical": "02",
+    "module": "M1",
+    "difficulty": "Starter",
+    "title": "Image resizing and interpolation",
+    "description": "Compare nearest-neighbour, bilinear and area interpolation when changing image dimensions.",
+    "file": "examples/practicals/practical_02_resize_image.py",
+    "tags": [
+      "sampling",
+      "interpolation",
+      "resize"
+    ],
+    "code": "import cv2\n\nimage = cv2.imread(\"image.jpg\")\nif image is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nsize = (640, 480)\nnearest = cv2.resize(image, size, interpolation=cv2.INTER_NEAREST)\nbilinear = cv2.resize(image, size, interpolation=cv2.INTER_LINEAR)\narea = cv2.resize(image, size, interpolation=cv2.INTER_AREA)\n\ncv2.imwrite(\"resize_nearest.png\", nearest)\ncv2.imwrite(\"resize_bilinear.png\", bilinear)\ncv2.imwrite(\"resize_area.png\", area)"
+  },
+  {
+    "id": "p06",
+    "practical": "06",
+    "module": "M1",
+    "difficulty": "Core",
+    "title": "Image rotation with an affine transform",
+    "description": "Rotate an image around its centre using a 2-D transformation matrix.",
+    "file": "examples/practicals/practical_06_image_rotation.py",
+    "tags": [
+      "geometry",
+      "affine",
+      "warpAffine"
+    ],
+    "code": "import cv2\n\nimage = cv2.imread(\"image.jpg\")\nif image is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nheight, width = image.shape[:2]\ncentre = (width / 2, height / 2)\nmatrix = cv2.getRotationMatrix2D(centre, 30, 1.0)\nrotated = cv2.warpAffine(image, matrix, (width, height))\n\ncv2.imwrite(\"rotated.png\", rotated)"
+  },
+  {
+    "id": "p07",
+    "practical": "07",
+    "module": "M1",
+    "difficulty": "Core",
+    "title": "Colour-space conversion",
+    "description": "Convert BGR into HSV and YCrCb, then extract a hue-saturation-value representation.",
+    "file": "examples/practicals/practical_07_colour_models.py",
+    "tags": [
+      "RGB",
+      "HSV",
+      "YCbCr"
+    ],
+    "code": "import cv2\n\nimage = cv2.imread(\"image.jpg\")\nif image is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nhsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)\nycrcb = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)\nhue, saturation, value = cv2.split(hsv)\n\ncv2.imwrite(\"hsv.png\", hsv)\ncv2.imwrite(\"ycrcb.png\", ycrcb)\ncv2.imwrite(\"hue.png\", hue)\ncv2.imwrite(\"saturation.png\", saturation)\ncv2.imwrite(\"value.png\", value)"
+  },
+  {
+    "id": "p08",
+    "practical": "08",
+    "module": "M1",
+    "difficulty": "Core",
+    "title": "Gray-level transforms: negative and gamma",
+    "description": "Apply point transformations using lookup tables for fast pixel-wise mapping.",
+    "file": "examples/practicals/practical_08_gray_level_transformations.py",
+    "tags": [
+      "negative",
+      "gamma",
+      "point processing"
+    ],
+    "code": "import cv2\nimport numpy as np\n\ngray = cv2.imread(\"image.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nnegative_lut = np.arange(256, dtype=np.uint8)[::-1]\ngamma = 0.7\ngamma_lut = np.array(\n    [round(255 * (value / 255) ** gamma) for value in range(256)],\n    dtype=np.uint8,\n)\n\nnegative = cv2.LUT(gray, negative_lut)\ngamma_corrected = cv2.LUT(gray, gamma_lut)\n\ncv2.imwrite(\"negative.png\", negative)\ncv2.imwrite(\"gamma.png\", gamma_corrected)"
+  },
+  {
+    "id": "p09",
+    "practical": "09",
+    "module": "M1",
+    "difficulty": "Advanced",
+    "title": "DFT magnitude spectrum",
+    "description": "Transform an image into the frequency domain and visualize its shifted log-magnitude spectrum.",
+    "file": "examples/practicals/practical_09_image_transforms.py",
+    "tags": [
+      "DFT",
+      "frequency domain",
+      "spectrum"
+    ],
+    "code": "import cv2\nimport numpy as np\n\ngray = cv2.imread(\"image.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nspectrum = np.fft.fft2(gray)\nshifted = np.fft.fftshift(spectrum)\nmagnitude = 20 * np.log(np.abs(shifted) + 1)\ndisplay = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)\ncv2.imwrite(\"dft_magnitude.png\", display.astype(np.uint8))"
+  },
+  {
+    "id": "p15",
+    "practical": "15",
+    "module": "M1",
+    "difficulty": "Starter",
+    "title": "Image merging and alpha blending",
+    "description": "Combine two aligned images with weighted addition.",
+    "file": "examples/practicals/practical_15_image_merging_blending.py",
+    "tags": [
+      "arithmetic",
+      "alpha blending",
+      "addWeighted"
+    ],
+    "code": "import cv2\n\nfirst = cv2.imread(\"first.jpg\")\nsecond = cv2.imread(\"second.jpg\")\nif first is None or second is None:\n    raise FileNotFoundError(\"Both input images must exist\")\n\nsecond = cv2.resize(second, (first.shape[1], first.shape[0]))\nblend = cv2.addWeighted(first, 0.65, second, 0.35, 0)\ncv2.imwrite(\"blended.png\", blend)"
+  },
+  {
+    "id": "p16",
+    "practical": "16",
+    "module": "M1",
+    "difficulty": "Starter",
+    "title": "Channel splitting and image quadrants",
+    "description": "Separate colour channels and divide an image into four spatial regions.",
+    "file": "examples/practicals/practical_16_image_splitting.py",
+    "tags": [
+      "channels",
+      "array slicing",
+      "split"
+    ],
+    "code": "import cv2\n\nimage = cv2.imread(\"image.jpg\")\nif image is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nblue, green, red = cv2.split(image)\nheight, width = image.shape[:2]\nmid_y, mid_x = height // 2, width // 2\n\ntop_left = image[:mid_y, :mid_x]\ntop_right = image[:mid_y, mid_x:]\nbottom_left = image[mid_y:, :mid_x]\nbottom_right = image[mid_y:, mid_x:]\n\ncv2.imwrite(\"blue.png\", blue)\ncv2.imwrite(\"green.png\", green)\ncv2.imwrite(\"red.png\", red)\ncv2.imwrite(\"top_left.png\", top_left)\ncv2.imwrite(\"top_right.png\", top_right)\ncv2.imwrite(\"bottom_left.png\", bottom_left)\ncv2.imwrite(\"bottom_right.png\", bottom_right)"
+  },
+  {
+    "id": "p03",
+    "practical": "03",
+    "module": "M2",
+    "difficulty": "Starter",
+    "title": "Mean, Gaussian, median and bilateral smoothing",
+    "description": "Compare four filters and see how each one changes edges and noise.",
+    "file": "examples/practicals/practical_03_image_blurring.py",
+    "tags": [
+      "denoising",
+      "smoothing",
+      "filters"
+    ],
+    "code": "import cv2\n\nimage = cv2.imread(\"image.jpg\")\nif image is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nmean = cv2.blur(image, (3, 3))\ngaussian = cv2.GaussianBlur(image, (5, 5), 0)\nmedian = cv2.medianBlur(image, 3)\nbilateral = cv2.bilateralFilter(image, 9, 75, 75)\n\ncv2.imwrite(\"mean.png\", mean)\ncv2.imwrite(\"gaussian.png\", gaussian)\ncv2.imwrite(\"median.png\", median)\ncv2.imwrite(\"bilateral.png\", bilateral)"
+  },
+  {
+    "id": "p04",
+    "practical": "04",
+    "module": "M2",
+    "difficulty": "Core",
+    "title": "Canny edge detection",
+    "description": "Detect edges after smoothing, using lower and upper hysteresis thresholds.",
+    "file": "examples/practicals/practical_04_edge_detection.py",
+    "tags": [
+      "edges",
+      "Canny",
+      "gradient"
+    ],
+    "code": "import cv2\n\ngray = cv2.imread(\"image.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nsmoothed = cv2.GaussianBlur(gray, (5, 5), 1.2)\nedges = cv2.Canny(smoothed, threshold1=80, threshold2=160)\ncv2.imwrite(\"canny_edges.png\", edges)"
+  },
+  {
+    "id": "p05",
+    "practical": "05",
+    "module": "M2",
+    "difficulty": "Starter",
+    "title": "Grayscale histogram",
+    "description": "Compute the frequency of each 8-bit intensity value.",
+    "file": "examples/practicals/practical_05_image_histogram.py",
+    "tags": [
+      "histogram",
+      "PDF",
+      "intensity"
+    ],
+    "code": "import cv2\nimport matplotlib.pyplot as plt\n\ngray = cv2.imread(\"image.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nhistogram = cv2.calcHist([gray], [0], None, [256], [0, 256])\nplt.plot(histogram)\nplt.xlabel(\"Intensity\")\nplt.ylabel(\"Pixel count\")\nplt.title(\"Grayscale histogram\")\nplt.xlim(0, 256)\nplt.tight_layout()\nplt.savefig(\"histogram.png\", dpi=160)"
+  },
+  {
+    "id": "p10",
+    "practical": "10",
+    "module": "M2",
+    "difficulty": "Starter",
+    "title": "Linear contrast stretching",
+    "description": "Expand a narrow intensity range to the full 8-bit output interval.",
+    "file": "examples/practicals/practical_10_linear_contrast_stretching.py",
+    "tags": [
+      "contrast",
+      "normalization",
+      "histogram"
+    ],
+    "code": "import cv2\nimport numpy as np\n\ngray = cv2.imread(\"image.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nlow = float(gray.min())\nhigh = float(gray.max())\nif high == low:\n    stretched = np.zeros_like(gray)\nelse:\n    scaled = (gray.astype(np.float32) - low) * (255.0 / (high - low))\n    stretched = np.clip(scaled, 0, 255).astype(np.uint8)\n\ncv2.imwrite(\"contrast_stretched.png\", stretched)"
+  },
+  {
+    "id": "p11",
+    "practical": "11",
+    "module": "M2",
+    "difficulty": "Advanced",
+    "title": "Fourier low-pass and high-pass masks",
+    "description": "Filter spatial frequencies using circular masks in the shifted Fourier domain.",
+    "file": "examples/practicals/practical_11_frequency_domain_filtering.py",
+    "tags": [
+      "DFT",
+      "low-pass",
+      "high-pass"
+    ],
+    "code": "import cv2\nimport numpy as np\n\ngray = cv2.imread(\"image.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nspectrum = np.fft.fftshift(np.fft.fft2(gray))\nheight, width = gray.shape\ny, x = np.ogrid[:height, :width]\ndistance = np.sqrt((x - width // 2) ** 2 + (y - height // 2) ** 2)\n\nlow_mask = (distance <= 35).astype(np.float32)\nhigh_mask = 1.0 - low_mask\nlow = np.fft.ifft2(np.fft.ifftshift(spectrum * low_mask)).real\nhigh = np.fft.ifft2(np.fft.ifftshift(spectrum * high_mask)).real\n\ncv2.imwrite(\"low_pass.png\", cv2.normalize(low, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8))\ncv2.imwrite(\"high_pass.png\", cv2.normalize(high, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8))"
+  },
+  {
+    "id": "r01",
+    "practical": "R1",
+    "module": "M3",
+    "difficulty": "Core",
+    "title": "Measure restoration quality: MSE, RMSE and PSNR",
+    "description": "Compare aligned reference and restored images with common fidelity metrics.",
+    "file": "src/dip/module3_restoration.py",
+    "tags": [
+      "MSE",
+      "RMSE",
+      "PSNR"
+    ],
+    "code": "import cv2\nimport numpy as np\n\nreference = cv2.imread(\"reference.png\", cv2.IMREAD_GRAYSCALE)\nrestored = cv2.imread(\"restored.png\", cv2.IMREAD_GRAYSCALE)\nif reference is None or restored is None:\n    raise FileNotFoundError(\"Both reference and restored images must exist\")\nif reference.shape != restored.shape:\n    raise ValueError(\"Images must have identical dimensions\")\n\ndifference = reference.astype(np.float64) - restored.astype(np.float64)\nmse = float(np.mean(difference ** 2))\nrmse = float(np.sqrt(mse))\npsnr = float(\"inf\") if mse == 0 else 10 * np.log10((255 ** 2) / mse)\n\nprint(f\"MSE:  {mse:.4f}\")\nprint(f\"RMSE: {rmse:.4f}\")\nprint(f\"PSNR: {psnr:.2f} dB\")"
+  },
+  {
+    "id": "r02",
+    "practical": "R2",
+    "module": "M3",
+    "difficulty": "Advanced",
+    "title": "Blur-and-noise degradation model",
+    "description": "Simulate a simple observed image using a point-spread kernel and additive Gaussian noise.",
+    "file": "src/dip/module3_restoration.py",
+    "tags": [
+      "PSF",
+      "degradation",
+      "noise"
+    ],
+    "code": "import cv2\nimport numpy as np\n\ngray = cv2.imread(\"image.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\npsf = np.ones((5, 5), dtype=np.float32) / 25.0\nblurred = cv2.filter2D(gray, -1, psf)\nrng = np.random.default_rng(7)\nnoise = rng.normal(loc=0, scale=5, size=gray.shape)\ndegraded = np.clip(blurred.astype(np.float32) + noise, 0, 255).astype(np.uint8)\n\ncv2.imwrite(\"degraded.png\", degraded)"
+  },
+  {
+    "id": "p12",
+    "practical": "12",
+    "module": "M4",
+    "difficulty": "Core",
+    "title": "Run-Length Encoding (RLE)",
+    "description": "Encode consecutive equal values into value-count pairs and decode them.",
+    "file": "examples/practicals/practical_12_run_length_encoding.py",
+    "tags": [
+      "lossless",
+      "RLE",
+      "redundancy"
+    ],
+    "code": "from itertools import groupby\nimport numpy as np\n\npixels = np.array([0, 0, 0, 40, 40, 255, 255, 255, 255], dtype=np.uint8)\n\nencoded = [(int(value), sum(1 for _ in run)) for value, run in groupby(pixels)]\ndecoded = np.array(\n    [value for value, count in encoded for _ in range(count)],\n    dtype=np.uint8,\n)\n\nprint(\"Encoded runs:\", encoded)\nprint(\"Exact reconstruction:\", np.array_equal(pixels, decoded))"
+  },
+  {
+    "id": "p13",
+    "practical": "13",
+    "module": "M4",
+    "difficulty": "Advanced",
+    "title": "Huffman coding tree",
+    "description": "Build a prefix-free variable-length code from symbol frequencies.",
+    "file": "examples/practicals/practical_13_huffman_coding.py",
+    "tags": [
+      "entropy coding",
+      "prefix-free",
+      "compression"
+    ],
+    "code": "from collections import Counter\nfrom heapq import heappush, heappop\nfrom itertools import count\n\ndef build_huffman_codes(symbols):\n    frequencies = Counter(symbols)\n    if not frequencies:\n        return {}\n    serial = count()\n    heap = []\n    for symbol, frequency in frequencies.items():\n        heappush(heap, (frequency, next(serial), symbol))\n\n    while len(heap) > 1:\n        left = heappop(heap)\n        right = heappop(heap)\n        node = (left[2], right[2])\n        heappush(heap, (left[0] + right[0], next(serial), node))\n\n    codes = {}\n    def walk(node, prefix=\"\"):\n        if not isinstance(node, tuple):\n            codes[node] = prefix or \"0\"\n            return\n        walk(node[0], prefix + \"0\")\n        walk(node[1], prefix + \"1\")\n\n    walk(heap[0][2])\n    return codes\n\ndata = list(\"AAABBCCCCD\")\ncodes = build_huffman_codes(data)\nprint(\"Codes:\", codes)\nprint(\"Encoded bits:\", \"\".join(codes[symbol] for symbol in data))"
+  },
+  {
+    "id": "p13b",
+    "practical": "13B",
+    "module": "M4",
+    "difficulty": "Advanced",
+    "title": "LZW dictionary compression",
+    "description": "Build a dictionary of repeated symbol sequences and encode them as integer indices.",
+    "file": "src/dip/module4_compression.py",
+    "tags": [
+      "LZW",
+      "dictionary",
+      "lossless"
+    ],
+    "code": "def lzw_encode(text):\n    if not text:\n        return []\n    dictionary = {chr(value): value for value in range(256)}\n    next_code = 256\n    current = \"\"\n    output = []\n\n    for symbol in text:\n        candidate = current + symbol\n        if candidate in dictionary:\n            current = candidate\n        else:\n            output.append(dictionary[current])\n            dictionary[candidate] = next_code\n            next_code += 1\n            current = symbol\n\n    if current:\n        output.append(dictionary[current])\n    return output\n\nprint(lzw_encode(\"ABABABA\"))"
+  },
+  {
+    "id": "p13c",
+    "practical": "13C",
+    "module": "M4",
+    "difficulty": "Core",
+    "title": "JPEG encode and decode",
+    "description": "Compress an image at a chosen JPEG quality and inspect the reconstructed result.",
+    "file": "src/dip/module4_compression.py",
+    "tags": [
+      "JPEG",
+      "DCT",
+      "quantization"
+    ],
+    "code": "import cv2\n\nimage = cv2.imread(\"image.jpg\")\nif image is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nsuccess, encoded = cv2.imencode(\n    \".jpg\",\n    image,\n    [cv2.IMWRITE_JPEG_QUALITY, 85],\n)\nif not success:\n    raise RuntimeError(\"JPEG encoding failed\")\n\nreconstructed = cv2.imdecode(encoded, cv2.IMREAD_COLOR)\ncv2.imwrite(\"jpeg_reconstructed.jpg\", reconstructed)\nprint(\"Compressed bytes:\", len(encoded))"
+  },
+  {
+    "id": "p14",
+    "practical": "14A",
+    "module": "M5",
+    "difficulty": "Core",
+    "title": "Otsu threshold and connected components",
+    "description": "Create a binary mask automatically, then label connected foreground regions.",
+    "file": "examples/practicals/practical_14_image_segmentation.py",
+    "tags": [
+      "Otsu",
+      "thresholding",
+      "components"
+    ],
+    "code": "import cv2\n\ngray = cv2.imread(\"image.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nthreshold, mask = cv2.threshold(\n    gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU\n)\ncount, labels, stats, centroids = cv2.connectedComponentsWithStats(\n    mask, connectivity=8\n)\n\nprint(\"Otsu threshold:\", threshold)\nprint(\"Foreground components:\", count - 1)\ncv2.imwrite(\"otsu_mask.png\", mask)"
+  },
+  {
+    "id": "p14b",
+    "practical": "14B",
+    "module": "M5",
+    "difficulty": "Starter",
+    "title": "Adaptive thresholding",
+    "description": "Calculate local thresholds for images with non-uniform illumination.",
+    "file": "src/dip/module5_segmentation.py",
+    "tags": [
+      "local threshold",
+      "illumination",
+      "binarization"
+    ],
+    "code": "import cv2\n\ngray = cv2.imread(\"document.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read document.jpg\")\n\nadaptive = cv2.adaptiveThreshold(\n    gray,\n    255,\n    cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\n    cv2.THRESH_BINARY,\n    blockSize=31,\n    C=7,\n)\ncv2.imwrite(\"adaptive_mask.png\", adaptive)"
+  },
+  {
+    "id": "p14c",
+    "practical": "14C",
+    "module": "M5",
+    "difficulty": "Advanced",
+    "title": "K-Means colour segmentation",
+    "description": "Cluster pixels in colour space and reconstruct a segmented image from cluster centres.",
+    "file": "src/dip/module5_segmentation.py",
+    "tags": [
+      "K-Means",
+      "clustering",
+      "unsupervised"
+    ],
+    "code": "import cv2\nimport numpy as np\n\nimage = cv2.imread(\"image.jpg\")\nif image is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\npixels = image.reshape((-1, 3)).astype(np.float32)\ncriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)\nk = 3\n_, labels, centres = cv2.kmeans(\n    pixels, k, None, criteria, 10, cv2.KMEANS_PP_CENTERS\n)\nsegmented = centres[labels.flatten()].reshape(image.shape).astype(np.uint8)\ncv2.imwrite(\"kmeans_segments.png\", segmented)"
+  },
+  {
+    "id": "p14d",
+    "practical": "14D",
+    "module": "M5",
+    "difficulty": "Advanced",
+    "title": "Seeded region growing",
+    "description": "Grow a connected region from a seed using an intensity-tolerance rule.",
+    "file": "src/dip/module5_segmentation.py",
+    "tags": [
+      "region growing",
+      "seed",
+      "connectivity"
+    ],
+    "code": "from collections import deque\nimport cv2\nimport numpy as np\n\ngray = cv2.imread(\"image.jpg\", cv2.IMREAD_GRAYSCALE)\nif gray is None:\n    raise FileNotFoundError(\"Could not read image.jpg\")\n\nseed_y, seed_x = 100, 100\ntolerance = 12\nseed_value = int(gray[seed_y, seed_x])\nmask = np.zeros(gray.shape, dtype=np.uint8)\nvisited = np.zeros(gray.shape, dtype=bool)\nqueue = deque([(seed_y, seed_x)])\nvisited[seed_y, seed_x] = True\n\nwhile queue:\n    y, x = queue.popleft()\n    if abs(int(gray[y, x]) - seed_value) > tolerance:\n        continue\n    mask[y, x] = 255\n    for ny, nx in ((y-1,x), (y+1,x), (y,x-1), (y,x+1)):\n        if 0 <= ny < gray.shape[0] and 0 <= nx < gray.shape[1] and not visited[ny, nx]:\n            visited[ny, nx] = True\n            queue.append((ny, nx))\n\ncv2.imwrite(\"region_growing_mask.png\", mask)"
+  }
+] as const;
