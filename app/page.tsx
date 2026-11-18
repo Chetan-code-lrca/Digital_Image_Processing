@@ -99,6 +99,7 @@ export default function Home() {
         return;
       }
 
+      const accountKey = KEY + ":" + nextUser.id;
       setCloudReady(false);
       setSyncState("syncing");
       const { data, error } = await supabase
@@ -110,13 +111,38 @@ export default function Home() {
       if (!active) return;
 
       if (error) {
-        setCloudReady(true);
+        const accountRaw = localStorage.getItem(accountKey);
+        const guestRaw = accountRaw ? null : localStorage.getItem(KEY);
+        const fallbackRaw = accountRaw ?? guestRaw;
+
+        if (fallbackRaw) {
+          try {
+            const progress = JSON.parse(fallbackRaw) as Partial<Saved>;
+            setSaved({
+              ...emptyState,
+              ...progress,
+              completed: Array.isArray(progress.completed) ? progress.completed : [],
+              tasks: Array.isArray(progress.tasks) ? progress.tasks : []
+            });
+            setHours(progress.hours ?? 2);
+            setGoal(progress.goal ?? emptyState.goal);
+            localStorage.setItem(accountKey, JSON.stringify({ ...emptyState, ...progress }));
+          } catch {
+            setSyncState("error");
+          }
+        } else {
+          setSaved(emptyState);
+          setHours(2);
+          setGoal(emptyState.goal);
+        }
+
+        // Never leave an unscoped guest record available for another account.
+        if (guestRaw) localStorage.removeItem(KEY);
+        setCloudReady(false);
         setSyncState("error");
         notify("Account signed in, but cloud progress is not ready. Finish the database setup guide.");
         return;
       }
-
-      const accountKey = KEY + ":" + nextUser.id;
 
       if (data?.progress) {
         const progress = data.progress as Partial<Saved>;
@@ -196,10 +222,11 @@ export default function Home() {
       return;
     }
 
-    if (!cloudReady || !supabase) return;
-
     const localKey = KEY + ":" + user.id;
     localStorage.setItem(localKey, JSON.stringify(progress));
+
+    if (!cloudReady || !supabase) return;
+
     setSyncState("syncing");
 
     let cancelled = false;
