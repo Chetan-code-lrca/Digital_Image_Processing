@@ -154,10 +154,10 @@ export default function Home() {
       void loadAccount(session?.user ?? null);
     });
 
-    void supabase.auth.getUser().then(({ data }) => {
+    void supabase.auth.getUser().then((result: { data: { user: User | null } }) => {
       if (!active) return;
       setAuthReady(true);
-      void loadAccount(data.user ?? null);
+      void loadAccount(result.data.user ?? null);
     }).catch(() => {
       if (active) {
         setAuthReady(true);
