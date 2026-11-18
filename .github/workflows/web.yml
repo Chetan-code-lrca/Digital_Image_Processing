@@ -1,0 +1,37 @@
+name: DIP Studio Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "lib/**"
+      - "package.json"
+      - "tsconfig.json"
+      - "next.config.ts"
+      - ".github/workflows/web.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "lib/**"
+      - "package.json"
+      - "tsconfig.json"
+      - "next.config.ts"
+      - ".github/workflows/web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run build

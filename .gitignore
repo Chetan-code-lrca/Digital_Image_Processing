@@ -33,3 +33,11 @@ data/*
 # Generated results
 outputs/
 results/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+npm-debug.log*
+*.tsbuildinfo

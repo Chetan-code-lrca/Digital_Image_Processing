@@ -1,5 +1,7 @@
 # Digital Image Processing — Learning Guide
 
+**Interactive preparation workspace:** [DIP Studio](dip-studio.md) — notes, quizzes, flashcards, planner, comparisons and Python/OpenCV code lab.
+
 This documentation is the theory companion to the Python implementations in this repository. Each module guide is intended to be read as a lesson, not just as a topic index.
 
 ## Start here

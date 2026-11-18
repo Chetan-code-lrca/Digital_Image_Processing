@@ -14,6 +14,21 @@ Learn and implement **image representation, colour models, gray-level transforma
   <img src="https://img.shields.io/badge/License-MIT-lightgrey" alt="MIT license">
 </p>
 
+## Interactive DIP preparation workspace
+
+**DIP Studio** is the interactive companion app included in this repository. It gives learners one place to study, revise and plan:
+
+- Topic-based notes and formulas across all five course modules
+- 20 multiple-choice quiz questions with explanations
+- 21 active-recall flashcards
+- A seven-day study planner and personal study sessions
+- Side-by-side comparisons of commonly confused methods
+- Python/OpenCV code snippets and a link to the complete implementation
+
+**[Open the DIP Studio setup guide](docs/dip-studio.md)** for local run and deployment instructions. The app is built with Next.js and is designed for Vercel deployment.
+
+> Progress is saved locally in the current browser. JSON export/import is available; account-based cloud sync is not part of this first release.
+
 ## What you can learn
 
 - **Digital Image Processing fundamentals:** pixels, image representation, sampling, quantization, visual perception, image capture and storage.
@@ -60,6 +75,9 @@ The module pages are full lessons rather than short topic summaries. Each includ
 | V. Image segmentation | Region extraction, pixel-based methods, multilevel/local thresholding, region-based methods, growing, splitting, merging, split-and-merge | [Module V](docs/module-5-image-segmentation.md) |
 
 ## Quick start
+
+The repository contains both the Python DIP lab and the interactive Next.js preparation workspace. For the web app, see [DIP Studio](docs/dip-studio.md).
+
 
 ### 1. Clone the repository
 
