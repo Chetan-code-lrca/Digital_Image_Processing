@@ -116,6 +116,8 @@ export default function Home() {
         return;
       }
 
+      const accountKey = KEY + ":" + nextUser.id;
+
       if (data?.progress) {
         const progress = data.progress as Partial<Saved>;
         setSaved({
@@ -126,9 +128,15 @@ export default function Home() {
         });
         setHours(progress.hours ?? 2);
         setGoal(progress.goal ?? emptyState.goal);
+        // Do not leave a shared guest record available to a different account on this device.
+        localStorage.removeItem(KEY);
       } else {
-        // First sign-in: keep this browser's existing study data and attach it to the new account.
-        const raw = localStorage.getItem(KEY + ":" + nextUser.id) ?? localStorage.getItem(KEY);
+        // Rehydrate this account's own browser cache first. Only the first account
+        // on a device can claim the guest record; it is removed after migration.
+        const accountRaw = localStorage.getItem(accountKey);
+        const guestRaw = accountRaw ? null : localStorage.getItem(KEY);
+        const raw = accountRaw ?? guestRaw;
+
         if (raw) {
           try {
             const progress = JSON.parse(raw) as Partial<Saved>;
@@ -140,14 +148,21 @@ export default function Home() {
             });
             setHours(progress.hours ?? 2);
             setGoal(progress.goal ?? emptyState.goal);
+            localStorage.setItem(accountKey, JSON.stringify({ ...emptyState, ...progress }));
           } catch {
             setSyncState("error");
           }
+        } else {
+          setSaved(emptyState);
+          setHours(2);
+          setGoal(emptyState.goal);
         }
+
+        if (guestRaw) localStorage.removeItem(KEY);
       }
 
       setCloudReady(true);
-      if (data?.progress) setSyncState("synced");
+      if (data?.progress || localStorage.getItem(accountKey)) setSyncState("synced");
     }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
@@ -304,7 +319,7 @@ export default function Home() {
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: window.location.origin + "/auth/callback" }
     });
     if (error) notify(error.message);
   }
