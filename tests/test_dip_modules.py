@@ -22,7 +22,7 @@ from src.dip.module4_compression import (
 )
 from src.dip.module5_segmentation import (
     otsu_threshold, multilevel_threshold, local_threshold, extract_regions,
-    region_growing, kmeans_segmentation, split_and_merge,
+    region_growing, kmeans_segmentation, region_split, region_merge, split_and_merge,
 )
 
 
