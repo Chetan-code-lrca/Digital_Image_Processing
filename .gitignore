@@ -1,6 +1,9 @@
 # Python
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 .venv/
@@ -16,17 +19,17 @@ env/
 
 # OS
 .DS_Store
+*:Zone.Identifier
 
 # Environment variables
 .env
 .env.*
 
-# Data
+# Generated sample / dataset files (tracked fixtures remain tracked)
 data/*
 !data/.gitkeep
+!data/sample.ppm
 
 # Generated results
 outputs/
 results/
-*:Zone.Identifier
-*:Zone.Identifier

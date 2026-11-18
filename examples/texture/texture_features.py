@@ -1,6 +1,7 @@
 import cv2
 import matplotlib.pyplot as plt
 
+from examples.sample_image import ensure_sample_image
 from src.texture.texture_statistics import calculate_texture_statistics
 
 

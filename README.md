@@ -1,182 +1,245 @@
-# Low-Level Image Feature Extraction
+# Digital Image Processing (DIP) with Python and OpenCV
 
-A small Digital Image Processing project that turns an image into simple numerical features for colour, texture, and shape.
+A practical, beginner-friendly **Digital Image Processing (DIP) lab using Python, OpenCV and NumPy**. The repository follows a five-module university DIP syllabus and provides explanations, reusable implementations, visual flowcharts, and 16 runnable image-processing practicals.
 
-The project is written in Python and uses OpenCV, NumPy, and Matplotlib. Each feature type is implemented separately and then combined into a single feature vector.
+Learn and implement **image representation, colour models, gray-level transformations, histogram equalization, DFT, DCT, Walsh-Hadamard, Haar, KLT, SVD, image enhancement, image restoration, image compression, and image segmentation**.
 
-## What it covers
+> This repository expands the original low-level image feature extraction project. The existing colour, texture, shape, and feature-fusion examples remain available alongside the complete DIP learning path.
 
-### Colour
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue?logo=python" alt="Python 3.10 or newer">
+  <img src="https://img.shields.io/badge/OpenCV-image%20processing-green?logo=opencv" alt="OpenCV">
+  <img src="https://img.shields.io/badge/Modules-5-purple" alt="Five DIP modules">
+  <img src="https://img.shields.io/badge/Practicals-16-orange" alt="Sixteen practical examples">
+  <img src="https://img.shields.io/badge/License-MIT-lightgrey" alt="MIT license">
+</p>
 
-- RGB and HSV representations
-- RGB histograms
-- Mean, minimum, and maximum channel values
+## What you can learn
 
-### Texture
+- **Digital Image Processing fundamentals:** pixels, image representation, sampling, quantization, visual perception, image capture and storage.
+- **Image enhancement:** contrast stretching, histogram methods, GLCM texture statistics, smoothing, noise reduction, sharpening, frequency filters and homomorphic filtering.
+- **Image restoration:** MSE, RMSE, least-squares restoration, SVD, MAP estimation and lens-distortion models.
+- **Image compression:** RLE, Huffman coding, LZW, arithmetic coding, JPEG encoding/decoding and vector quantization.
+- **Image segmentation:** global, Otsu, multilevel and local thresholding; region extraction; region growing; splitting, merging and split-and-merge.
+- **Low-level feature extraction:** colour, texture and shape descriptors with feature fusion.
 
-- Grayscale conversion
-- Mean intensity
-- Variance
-- Standard deviation
-- Grayscale histogram
+## Digital Image Processing workflow
 
-### Shape
+~~~mermaid
+flowchart TD
+    A[Real-world scene] --> B[Image acquisition]
+    B --> C[Sampling]
+    C --> D[Quantization]
+    D --> E[Digital image]
+    E --> F{Processing task}
+    F --> G[Enhancement]
+    F --> H[Restoration]
+    F --> I[Compression]
+    F --> J[Segmentation]
+    G --> K[Image analysis]
+    H --> K
+    I --> L[Storage and transmission]
+    J --> M[Regions and features]
+    M --> K
+~~~
 
-- Grayscale conversion
-- Thresholding
-- Canny edge detection
-- Contour detection
-- Contour area and perimeter
+See **[all module flowcharts](docs/flowcharts.md)** for the detailed learning diagrams.
 
-### Feature fusion
+## Syllabus coverage: all five modules
 
-The colour, texture, and shape outputs are concatenated into one feature vector that can be used as input to a later analysis or machine-learning step.
+| Module | Topics covered | Learning guide |
+|---|---|---|
+| I. Image presentation and transform | Visual perception, colour representation, acquisition, storage, gray-level transforms, histogram equalization/specification, multi-image operations, DFT, DCT, Walsh-Hadamard, Haar, KLT, SVD | [Module I](docs/module-1-image-representation-and-transforms.md) |
+| II. Image enhancement | Contrast intensification, linear/non-linear stretching, histogram specification, GLCM, smoothing, averaging, mean/order-statistic filters, edge-preserving smoothing, low/high-pass filtering, sharpening, homomorphic filtering | [Module II](docs/module-2-image-enhancement.md) |
+| III. Image restoration | MSE, RMSE, least-squares, SVD restoration, MAP estimation, homomorphic restoration, distortion models and filtering | [Module III](docs/module-3-image-restoration.md) |
+| IV. Image compression | Fidelity criteria, RLE, Huffman, LZW, arithmetic coding, JPEG encoder/decoder, vector quantization | [Module IV](docs/module-4-image-compression.md) |
+| V. Image segmentation | Region extraction, pixel-based methods, multilevel/local thresholding, region-based methods, growing, splitting, merging, split-and-merge | [Module V](docs/module-5-image-segmentation.md) |
 
-## Processing pipeline
+## Quick start
 
-```text
-Input image
-    │
-    ├── Colour  ──> RGB / HSV statistics + histogram
-    │
-    ├── Texture ─> Grayscale statistics + histogram
-    │
-    └── Shape   ─> Threshold -> Edges -> Contours
-                       │
-                       ▼
-              Combined feature vector
-```
+### 1. Clone the repository
 
-## Repository layout
+~~~bash
+git clone https://github.com/Chetan-code-lrca/low-level-image-feature-extraction.git
+cd low-level-image-feature-extraction
+~~~
 
-```text
-low-level-image-feature-extraction/
-├── article/
-│   ├── 01-introduction.md
-│   ├── 02-low-level-features.md
-│   ├── 03-colour-features.md
-│   ├── 04-texture-features.md
-│   ├── 05-shape-features.md
-│   ├── 06-applications.md
-│   ├── 07-conclusion.md
-│   ├── 08-combining-features.md
-│   └── references.md
-├── data/
-│   └── sample.jpg
-├── examples/
-│   ├── colour/
-│   ├── texture/
-│   ├── shape/
-│   └── fusion/
-├── src/
-│   ├── colour/
-│   ├── texture/
-│   ├── shape/
-│   └── fusion/
-├── tests/
-│   ├── test_colour.py
-│   ├── test_texture.py
-│   ├── test_shape.py
-│   └── test_fusion.py
-├── requirements.txt
-├── LICENSE
-└── README.md
-```
+### 2. Create a virtual environment
 
-## Requirements
+~~~bash
+python -m venv .venv
+~~~
 
-- Python 3.10 or newer
-- OpenCV
-- NumPy
-- Matplotlib
-- Pytest
+Activate it:
 
-The repository's `requirements.txt` is a full captured Python environment and includes Jupyter-related packages as well as the image-processing dependencies. The commands below are enough to install everything it specifies.
+**Linux / macOS / WSL**
 
-## Setup
-
-Create a virtual environment and install the repository dependencies.
-
-### Linux / macOS
-
-```bash
-python3 -m venv .venv
+~~~bash
 source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
+~~~
 
-### Windows PowerShell
+**Windows PowerShell**
 
-```powershell
-py -m venv .venv
+~~~powershell
 .venv\Scripts\Activate.ps1
+~~~
+
+### 3. Install dependencies
+
+~~~bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-```
+~~~
 
-## Run the examples
+### 4. Run a practical
 
-The example scripts use `examples/sample_image.py` to create a deterministic `data/sample.jpg` fixture when it is not already present. Replace `data/sample.jpg` with another image to experiment with a different input.
+For example, run RGB-to-grayscale conversion:
 
-### Colour features
+~~~bash
+python -m examples.practicals.practical_01_rgb_to_grayscale
+~~~
 
-```bash
+The examples generate a deterministic sample image when no input image is present. Results are written under **outputs/practicals/**. You can replace the generated sample with your own image for experiments.
+
+## 16 runnable DIP practicals
+
+Each experiment has a separate Python file. Run commands from the repository root.
+
+| No. | Practical / experiment | Python command |
+|---:|---|---|
+| 01 | RGB to grayscale conversion | `python -m examples.practicals.practical_01_rgb_to_grayscale` |
+| 02 | Image resizing and interpolation | `python -m examples.practicals.practical_02_resize_image` |
+| 03 | Image blurring and Gaussian smoothing | `python -m examples.practicals.practical_03_image_blurring` |
+| 04 | Edge detection using Canny | `python -m examples.practicals.practical_04_edge_detection` |
+| 05 | Image histogram | `python -m examples.practicals.practical_05_image_histogram` |
+| 06 | Image rotation | `python -m examples.practicals.practical_06_image_rotation` |
+| 07 | HSV, HSI, YCbCr and CMYK colour models | `python -m examples.practicals.practical_07_colour_models` |
+| 08 | Gray-level transformations | `python -m examples.practicals.practical_08_gray_level_transformations` |
+| 09 | DFT, DCT, Hadamard and Haar transforms | `python -m examples.practicals.practical_09_image_transforms` |
+| 10 | Linear contrast stretching | `python -m examples.practicals.practical_10_linear_contrast_stretching` |
+| 11 | Frequency-domain low-pass and high-pass filters | `python -m examples.practicals.practical_11_frequency_domain_filtering` |
+| 12 | Run-length encoding | `python -m examples.practicals.practical_12_run_length_encoding` |
+| 13 | Huffman coding | `python -m examples.practicals.practical_13_huffman_coding` |
+| 14 | Otsu and K-Means image segmentation | `python -m examples.practicals.practical_14_image_segmentation` |
+| 15 | Image merging and alpha blending | `python -m examples.practicals.practical_15_image_merging_blending` |
+| 16 | Colour-channel and spatial image splitting | `python -m examples.practicals.practical_16_image_splitting` |
+
+## Reusable algorithm implementations
+
+The implementations are organized by syllabus module under **src/dip/**.
+
+| File | Main functions |
+|---|---|
+| `module1_representation.py` | Sampling/quantization, colour models, negative/log/gamma, histogram equalization/specification, multi-image operations, DFT, DCT, Walsh-Hadamard, Haar, KLT, SVD |
+| `module2_enhancement.py` | Linear/nonlinear contrast, GLCM, mean/Gaussian/median/order-statistic filters, image averaging, bilateral smoothing, low/high-pass filtering, sharpening, homomorphic filtering |
+| `module3_restoration.py` | MSE/RMSE, least-squares fitting/restoration, SVD restoration, MAP restoration, homomorphic restoration, radial/tangential distortion |
+| `module4_compression.py` | RLE, Huffman, LZW, arithmetic coding, JPEG encode/decode, vector quantization |
+| `module5_segmentation.py` | Global/Otsu/multilevel/local thresholding, region extraction, region growing, K-Means, split-and-merge |
+
+Example: use the same functions in your own Python script.
+
+~~~python
+import cv2
+from src.dip.module2_enhancement import linear_contrast_stretch, bilateral_smoothing
+
+image = cv2.imread("data/sample.jpg")
+enhanced = linear_contrast_stretch(image)
+smoothed = bilateral_smoothing(image)
+
+cv2.imwrite("outputs/enhanced.png", enhanced)
+cv2.imwrite("outputs/smoothed.png", smoothed)
+~~~
+
+## Original low-level image feature extraction project
+
+The original feature-extraction work is preserved:
+
+- **Colour features:** RGB/HSV representations, colour histograms and channel statistics.
+- **Texture features:** grayscale statistics and histograms.
+- **Shape features:** thresholding, Canny edges, contours, area and perimeter.
+- **Feature fusion:** combine colour, texture and shape measurements into a feature vector.
+
+Run the original examples:
+
+~~~bash
 python -m examples.colour.colour_features
-```
-
-This shows the RGB image, HSV representation, and RGB histogram and prints basic colour statistics.
-
-### Texture features
-
-```bash
 python -m examples.texture.texture_features
-```
-
-This converts the image to grayscale, displays the grayscale image and histogram, and prints the mean, variance, and standard deviation.
-
-### Shape features
-
-```bash
 python -m examples.shape.shape_features
-```
-
-This shows the thresholded image, Canny edges, and detected contours and reports contour measurements.
-
-### Feature fusion
-
-```bash
 python -m examples.fusion.feature_fusion
-```
+~~~
 
-This combines the colour, texture, and shape outputs into one feature vector.
+Read the longer [feature extraction article](article/README.md).
 
-## Run the tests
+## Repository structure
 
-```bash
+~~~text
+low-level-image-feature-extraction/
+├── article/                   # Original feature-extraction learning articles
+├── data/                      # Sample data / generated sample image
+├── docs/
+│   ├── flowcharts.md           # Mermaid learning and algorithm flowcharts
+│   ├── module-1-...md          # Module I notes and code map
+│   ├── module-2-...md          # Module II notes and code map
+│   ├── module-3-...md          # Module III notes and code map
+│   ├── module-4-...md          # Module IV notes and code map
+│   ├── module-5-...md          # Module V notes and code map
+│   └── repository-discovery.md # Suggested GitHub search metadata
+├── examples/
+│   ├── colour/                 # Original colour feature example
+│   ├── texture/                # Original texture feature example
+│   ├── shape/                  # Original shape feature example
+│   ├── fusion/                 # Original feature-fusion example
+│   └── practicals/             # 16 individual syllabus practicals
+├── src/
+│   ├── colour/                 # Original colour feature functions
+│   ├── texture/                # Original texture feature functions
+│   ├── shape/                  # Original shape feature functions
+│   ├── fusion/                 # Original feature-fusion function
+│   └── dip/                    # Five-module DIP implementations
+└── tests/                      # Automated tests for core functions
+~~~
+
+## Run the test suite
+
+~~~bash
 python -m pytest -v
-```
+~~~
 
-The test suite covers the colour, texture, shape, and fusion modules.
+A GitHub Actions workflow runs the tests on pushes and pull requests to the main branch.
 
-## Notes on the implementation
+## Learning path
 
-The project deliberately uses simple, easy-to-follow image statistics rather than advanced descriptors. That makes it useful for understanding how raw pixel information can be turned into features before moving on to more complex computer-vision pipelines.
+1. Start with **Module I** to understand how images are represented and transformed.
+2. Continue with **Module II** to improve contrast, reduce noise and sharpen details.
+3. Study **Module III** to understand degradation models and restoration quality.
+4. Learn **Module IV** to compare lossless and lossy image compression.
+5. Finish with **Module V** to separate objects and regions from images.
+6. Run the 16 practical scripts and modify parameters to observe how outputs change.
 
-Thresholding and contour detection are sensitive to image content and background conditions, so the results can change substantially between images.
+## Intended audience
 
-## Possible extensions
+This open-source Digital Image Processing Python project is intended for undergraduate computer science students, computer vision beginners, engineering labs, self-learners, and contributors who want to understand classical image-processing algorithms through readable code.
 
-Natural next steps include:
+## Contributing
 
-- GLCM-based texture features
-- Local Binary Patterns (LBP)
-- Gabor filters
-- More robust shape descriptors
-- Feature normalization and weighting
-- Image similarity and retrieval
-- A classifier built on the combined feature vectors
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), keep examples reproducible, add tests for new algorithms, and document assumptions or limitations.
+
+## SEO and repository discovery
+
+This project is organized around the actual topics learners search for: **Digital Image Processing Python, DIP practicals, OpenCV image processing, image enhancement, image restoration, image compression, image segmentation, histogram equalization, DFT, DCT, GLCM, JPEG, Huffman coding, and computer vision**.
+
+For the recommended GitHub repository description, topics, and discovery settings, see [Repository discovery and search setup](docs/repository-discovery.md).
+
+Search engines decide independently whether and when to index a page. Clear documentation improves discoverability but does not guarantee a particular search position.
+
+## References
+
+- B. Chandra and D. Majumder, *Digital Image Processing and Analysis*.
+- Anil K. Jain, *Fundamentals of Digital Image Processing*.
+- [OpenCV documentation](https://docs.opencv.org/)
+- [scikit-image documentation](https://scikit-image.org/docs/stable/)
+- [NumPy documentation](https://numpy.org/doc/)
 
 ## License
 
-This project is released under the MIT License. See [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
