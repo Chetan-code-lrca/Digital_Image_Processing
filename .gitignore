@@ -22,6 +22,7 @@ env/
 *:Zone.Identifier
 
 # Environment variables
+!.env.example
 .env
 .env.*
 
