@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { modules, flashcards, quizzes, comparisons, codeExamples, type ModuleId, type Lesson } from "@/lib/content";
+import type { User } from "@supabase/supabase-js";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type View = "home" | "notes" | "quiz" | "cards" | "planner" | "compare" | "code";
 type Task = { id: string; title: string; day: string; minutes: number; module: ModuleId; done: boolean };
@@ -29,6 +31,13 @@ export default function Home() {
   const [answered, setAnswered] = useState(0);
   const [comparisonId, setComparisonId] = useState(comparisons[0].id);
   const [codeModule, setCodeModule] = useState<"all" | ModuleId>("all");
+  const [codeSearch, setCodeSearch] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [cloudReady, setCloudReady] = useState(false);
+  const [syncState, setSyncState] = useState<"local" | "syncing" | "synced" | "error" | "off">("local");
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [newTask, setNewTask] = useState("");
   const [newTaskModule, setNewTaskModule] = useState<ModuleId>("M1");
   const [hours, setHours] = useState(2);
@@ -52,8 +61,150 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (ready) localStorage.setItem(KEY, JSON.stringify({ ...saved, hours, goal }));
-  }, [saved, hours, goal, ready]);
+    if (!supabase) {
+      setAuthReady(true);
+      setSyncState("off");
+      return;
+    }
+
+    let active = true;
+
+    async function loadAccount(nextUser: User | null) {
+      setUser(nextUser);
+      setAccountOpen(false);
+
+      if (!nextUser) {
+        setCloudReady(false);
+        setSyncState("local");
+        try {
+          const raw = localStorage.getItem(KEY);
+          if (raw) {
+            const data = JSON.parse(raw) as Partial<Saved>;
+            setSaved({
+              ...emptyState,
+              ...data,
+              completed: Array.isArray(data.completed) ? data.completed : [],
+              tasks: Array.isArray(data.tasks) ? data.tasks : []
+            });
+            setHours(data.hours ?? 2);
+            setGoal(data.goal ?? emptyState.goal);
+          } else {
+            setSaved(emptyState);
+            setHours(2);
+            setGoal(emptyState.goal);
+          }
+        } catch {
+          setSyncState("error");
+        }
+        return;
+      }
+
+      setCloudReady(false);
+      setSyncState("syncing");
+      const { data, error } = await supabase
+        .from("user_progress")
+        .select("progress")
+        .eq("user_id", nextUser.id)
+        .maybeSingle();
+
+      if (!active) return;
+
+      if (error) {
+        setCloudReady(true);
+        setSyncState("error");
+        notify("Account signed in, but cloud progress is not ready. Finish the database setup guide.");
+        return;
+      }
+
+      if (data?.progress) {
+        const progress = data.progress as Partial<Saved>;
+        setSaved({
+          ...emptyState,
+          ...progress,
+          completed: Array.isArray(progress.completed) ? progress.completed : [],
+          tasks: Array.isArray(progress.tasks) ? progress.tasks : []
+        });
+        setHours(progress.hours ?? 2);
+        setGoal(progress.goal ?? emptyState.goal);
+      } else {
+        // First sign-in: keep this browser's existing study data and attach it to the new account.
+        const raw = localStorage.getItem(KEY + ":" + nextUser.id) ?? localStorage.getItem(KEY);
+        if (raw) {
+          try {
+            const progress = JSON.parse(raw) as Partial<Saved>;
+            setSaved({
+              ...emptyState,
+              ...progress,
+              completed: Array.isArray(progress.completed) ? progress.completed : [],
+              tasks: Array.isArray(progress.tasks) ? progress.tasks : []
+            });
+            setHours(progress.hours ?? 2);
+            setGoal(progress.goal ?? emptyState.goal);
+          } catch {
+            setSyncState("error");
+          }
+        }
+      }
+
+      setCloudReady(true);
+      if (data?.progress) setSyncState("synced");
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      void loadAccount(session?.user ?? null);
+    });
+
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!active) return;
+      setAuthReady(true);
+      void loadAccount(data.user ?? null);
+    }).catch(() => {
+      if (active) {
+        setAuthReady(true);
+        setSyncState("error");
+      }
+    });
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!ready || !authReady) return;
+
+    const progress = { ...saved, hours, goal };
+
+    if (!user) {
+      localStorage.setItem(KEY, JSON.stringify(progress));
+      return;
+    }
+
+    if (!cloudReady || !supabase) return;
+
+    const localKey = KEY + ":" + user.id;
+    localStorage.setItem(localKey, JSON.stringify(progress));
+    setSyncState("syncing");
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const { error } = await supabase.from("user_progress").upsert(
+        {
+          user_id: user.id,
+          progress,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: "user_id" }
+      );
+      if (!cancelled) setSyncState(error ? "error" : "synced");
+    }, 650);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [saved, hours, goal, ready, user, authReady, cloudReady, supabase]);
 
   const allLessons = useMemo(() => modules.flatMap((module) => module.topics.map((topic) => ({ ...topic, moduleId: module.id, moduleTitle: module.title }))), []);
   const totalLessons = allLessons.length;
@@ -72,7 +223,12 @@ export default function Home() {
   const activeQuiz = quizzes.filter((question) => quizModule === "all" || question.module === quizModule);
   const currentQuestion = activeQuiz[quizIndex % Math.max(activeQuiz.length, 1)];
   const currentComparison = comparisons.find((item) => item.id === comparisonId) ?? comparisons[0];
-  const filteredCode = codeExamples.filter((item) => codeModule === "all" || item.module === codeModule);
+  const filteredCode = codeExamples.filter((item) => {
+    const moduleMatches = codeModule === "all" || item.module === codeModule;
+    const query = codeSearch.trim().toLowerCase();
+    const textMatches = !query || [item.title, item.description, item.file, ...item.tags].join(" ").toLowerCase().includes(query);
+    return moduleMatches && textMatches;
+  });
   const today = DAYS[(new Date().getDay() + 6) % 7];
   const todaysTasks = saved.tasks.filter((task) => task.day === today);
 
@@ -141,6 +297,28 @@ export default function Home() {
     setSaved((previous) => ({ ...previous, tasks: [...previous.tasks.filter((task) => !task.id.startsWith("auto-") || task.done), ...generated] }));
     notify("A seven-day plan has been generated.");
   }
+  async function signInWithGoogle() {
+    if (!supabase) {
+      notify("Google sign-in is not configured yet. Follow docs/auth-setup.md to connect Supabase.");
+      return;
+    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) notify(error.message);
+  }
+
+  async function signOut() {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signOut();
+    if (error) notify(error.message);
+    else {
+      setAccountOpen(false);
+      notify("Signed out. Guest progress remains saved on this device.");
+    }
+  }
+
   function exportProgress() {
     const payload = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), saved: { ...saved, hours, goal } }, null, 2);
     const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
@@ -189,7 +367,50 @@ export default function Home() {
           <div className="crumb"><span>Workspace</span><b>/</b><strong>{view === "home" ? "Overview" : view === "notes" ? "Study notes" : view === "quiz" ? "Knowledge check" : view === "cards" ? "Flashcards" : view === "planner" ? "Study planner" : view === "compare" ? "Method comparison" : "Code lab"}</strong></div>
           <div className="top-actions">
             <label className="search"><span>⌕</span><input value={search} onChange={(event) => { setSearch(event.target.value); if (event.target.value) setView("notes"); }} placeholder="Search notes, topics..." /></label>
-            <button className="avatar" onClick={exportProgress} title="Export progress">C</button>
+            <div className="account-wrap">
+              <button
+                className="avatar"
+                onClick={() => setAccountOpen((open) => !open)}
+                aria-label="Open account menu"
+                aria-expanded={accountOpen}
+                title={user?.email ?? "Guest account"}
+              >
+                {user
+                  ? String(user.user_metadata?.full_name ?? user.email ?? "U").trim().charAt(0).toUpperCase()
+                  : "C"}
+              </button>
+              {accountOpen && (
+                <div className="account-menu">
+                  {user ? (
+                    <>
+                      <div className="account-heading">
+                        <strong>{user.user_metadata?.full_name ?? "DIP learner"}</strong>
+                        <small>{user.email}</small>
+                      </div>
+                      <div className="account-sync">
+                        <i className={syncState === "synced" ? "online" : syncState === "error" ? "offline" : ""} />
+                        {syncState === "synced" ? "Progress synced to your account" : syncState === "syncing" ? "Syncing progress…" : syncState === "error" ? "Cloud sync needs attention" : "Signed in"}
+                      </div>
+                      <button className="account-action" onClick={exportProgress}>↓ Export progress backup</button>
+                      <button className="account-action account-signout" onClick={signOut}>Sign out</button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="account-heading">
+                        <strong>Continue as a learner</strong>
+                        <small>Guest progress is stored only in this browser.</small>
+                      </div>
+                      <button className="google-signin" onClick={signInWithGoogle}>
+                        <b>G</b> Continue with Google
+                      </button>
+                      <div className="account-footnote">
+                        Sign in to keep your own progress across devices. Google sign-in requires the one-time setup in <a href="https://github.com/Chetan-code-lrca/Digital_Image_Processing/blob/main/docs/auth-setup.md" target="_blank" rel="noreferrer">the account setup guide</a>.
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -259,8 +480,51 @@ export default function Home() {
 
           {view === "code" && <>
             <PageIntro eyebrow="IMPLEMENT THE CONCEPT" title={<>The DIP <em>code lab.</em></>} desc="Runnable Python patterns for common image-processing tasks. Each snippet includes a practical purpose." />
-            <div className="toolbar"><div className="pills"><button className={codeModule==="all"?"active":""} onClick={()=>setCodeModule("all")}>All snippets</button>{modules.map((module)=><button key={module.id} className={codeModule===module.id?"active":""} onClick={()=>setCodeModule(module.id)}>{module.number}</button>)}</div><small>{filteredCode.length} SNIPPETS</small></div>
-            <div className="code-grid">{filteredCode.map((item)=><article className="code-card" key={item.id}><div className="code-meta"><span className={"tag "+item.module.toLowerCase()}>{item.module}</span><small>PYTHON · OPENCV</small></div><h3>{item.title}</h3><p>{item.description}</p><pre>{item.code}</pre><button onClick={()=>copy(item.code)}>Copy snippet ↗</button></article>)}</div>
+            <div className="code-toolbar">
+              <label className="code-search">
+                <span>⌕</span>
+                <input
+                  value={codeSearch}
+                  onChange={(event) => setCodeSearch(event.target.value)}
+                  placeholder="Search algorithms, concepts or practicals…"
+                  aria-label="Search code examples"
+                />
+              </label>
+              <div className="pills">
+                <button className={codeModule==="all"?"active":""} onClick={()=>setCodeModule("all")}>All modules</button>
+                {modules.map((module)=><button key={module.id} className={codeModule===module.id?"active":""} onClick={()=>setCodeModule(module.id)}>{module.number}</button>)}
+              </div>
+              <small>{filteredCode.length} OF {codeExamples.length} PRACTICAL SNIPPETS</small>
+            </div>
+            {filteredCode.length ? (
+              <div className="code-grid">
+                {filteredCode.map((item)=>(
+                  <article className="code-card" key={item.id}>
+                    <div className="code-meta">
+                      <span className={"tag "+item.module.toLowerCase()}>{item.module}</span>
+                      <small>EXPERIMENT {item.practical} · PYTHON · OPENCV</small>
+                    </div>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                    <div className="code-tags">
+                      <span>{item.difficulty}</span>
+                      {item.tags.map((tag)=><span key={tag}>{tag}</span>)}
+                    </div>
+                    <pre><code>{item.code}</code></pre>
+                    <div className="code-card-footer">
+                      <small>{item.file}</small>
+                      <button onClick={()=>copy(item.code)}>Copy snippet ↗</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="code-empty">
+                <strong>No practicals match this filter.</strong>
+                <span>Choose another module or clear your search.</span>
+                <button className="quiet" onClick={()=>{setCodeModule("all");setCodeSearch("");}}>Clear filters</button>
+              </div>
+            )}
             <div className="repo-cta"><div><small>GO DEEPER</small><h3>Explore the complete implementation.</h3><p>The repository contains reusable functions for all five modules and 16 runnable practical scripts.</p></div><a href="https://github.com/Chetan-code-lrca/Digital_Image_Processing" target="_blank" rel="noreferrer">Open GitHub repository ↗</a></div>
           </>}
           <footer className="footer"><span>DIP STUDIO · CSE2571C DIGITAL IMAGE PROCESSING</span><span>Built for learning, not just last-minute memorising.</span></footer>
