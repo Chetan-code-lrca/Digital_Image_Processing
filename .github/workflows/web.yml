@@ -6,18 +6,24 @@ on:
     paths:
       - "app/**"
       - "lib/**"
+      - "supabase/**"
+      - "proxy.ts"
       - "package.json"
       - "tsconfig.json"
       - "next.config.ts"
+      - ".env.example"
       - ".github/workflows/web.yml"
   pull_request:
     branches: [main]
     paths:
       - "app/**"
       - "lib/**"
+      - "supabase/**"
+      - "proxy.ts"
       - "package.json"
       - "tsconfig.json"
       - "next.config.ts"
+      - ".env.example"
       - ".github/workflows/web.yml"
   workflow_dispatch:
 
