@@ -1,17 +1,17 @@
 # DIP Studio — Preparation Workspace
 
-DIP Studio is the interactive learning workspace included with this repository.
+DIP Studio is the interactive learning workspace for the five-module CSE2571C Digital Image Processing syllabus.
 
 ## Features
 
-- Five syllabus modules aligned to the CSE2571C Digital Image Processing course.
-- Topic-based study notes with key formulas, worked examples, implementation snippets and completion tracking.
-- A 20-question multiple-choice practice bank with answer explanations.
+- Five syllabus modules with topic notes, formulas and worked examples.
+- 20 multiple-choice questions with explanations.
 - 21 active-recall flashcards.
-- A seven-day planner with module-aware sessions and custom tasks.
-- Side-by-side comparisons for commonly confused methods.
-- Python/OpenCV code examples linked to module topics.
-- Browser-local progress storage with JSON export and import.
+- A weekly planner with custom study sessions.
+- Side-by-side comparisons of common methods.
+- A searchable code lab containing 23 practical snippets across all five modules.
+- Guest mode with browser-local progress and JSON export/import.
+- Google sign-in and user-specific cloud progress when Supabase is configured.
 
 ## Run locally
 
@@ -19,10 +19,11 @@ Requirements: Node.js 20.9 or later and npm.
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. The app works in guest mode without Supabase variables. To enable Google login and cross-device sync, follow [Google account and cloud progress setup](auth-setup.md).
 
 For a production build:
 
@@ -34,14 +35,14 @@ npm start
 
 ## Progress storage and privacy
 
-The first release stores completion state and planner tasks in the current browser's localStorage. Notes, question banks, flashcards and code examples are bundled with the app.
+Guest mode stores progress in the current browser's localStorage. The JSON backup option lets a guest export and import that local progress.
 
-There is no account system or server-side user database in this release. Progress does not automatically sync between devices or browsers. Use **Export progress backup** to download a JSON file and **Import progress backup** on another browser.
+Account mode uses Supabase Auth and Postgres. A learner's progress is stored in a row keyed by the authenticated Supabase user ID. The `user_progress` table has row-level security policies that restrict select, insert and update access to the current user's row. The client uses the Supabase publishable key; the Supabase secret/service-role key must never be exposed in browser code.
 
-Do not store sensitive personal information in the planner.
+Google OAuth does not become active until the Supabase project, environment variables, database migration and Google provider credentials have been configured. See [auth-setup.md](auth-setup.md).
 
 ## Vercel deployment
 
-The project is a Next.js application at the repository root. Vercel should detect the Next.js framework automatically. The Git-linked project deploys new commits on the connected production branch and creates preview deployments for other branches.
+The Next.js application is in the repository root. Use the **Next.js** framework preset and root directory `./`. The connected GitHub project deploys from `main`.
 
-Set `NEXT_PUBLIC_SITE_URL` to the final public site URL after assigning a stable domain so the generated sitemap and robots metadata use the correct host.
+For user accounts, create/connect a Supabase resource to the Vercel project, confirm `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are available in the required environments, run the SQL migration, and configure Google OAuth. The detailed sequence is in [auth-setup.md](auth-setup.md).
