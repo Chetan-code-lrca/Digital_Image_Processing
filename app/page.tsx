@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { modules, flashcards, quizzes, comparisons, codeExamples, type ModuleId, type Lesson } from "@/lib/content";
-import type { AuthChangeEvent, User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type View = "home" | "notes" | "quiz" | "cards" | "planner" | "compare" | "code";
@@ -150,7 +150,7 @@ export default function Home() {
       if (data?.progress) setSyncState("synced");
     }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       void loadAccount(session?.user ?? null);
     });
 
