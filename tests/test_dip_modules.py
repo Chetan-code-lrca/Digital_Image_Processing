@@ -4,6 +4,8 @@ import pytest
 
 from src.dip.module1_representation import (
     convert_colour_models, sample_and_quantize, gray_negative,
+    log_transform, inverse_log_transform, gamma_transform,
+    piecewise_linear_transform, gray_level_slicing,
     histogram_equalization, dct_transform, dct_inverse,
     walsh_hadamard_transform, haar_transform, svd_low_rank,
 )
@@ -12,7 +14,7 @@ from src.dip.module2_enhancement import (
     bilateral_smoothing, low_pass_filter, high_pass_filter,
 )
 from src.dip.module3_restoration import (
-    mean_squared_error, root_mean_squared_error, least_squares_line,
+    mean_squared_error, root_mean_squared_error, peak_signal_to_noise_ratio, least_squares_line,
     least_squares_restore, map_restore, apply_lens_distortion,
 )
 from src.dip.module4_compression import (
@@ -52,6 +54,19 @@ def test_sampling_quantization_and_negative(gray):
     assert np.array_equal(gray_negative(gray), 255 - gray)
 
 
+def test_gray_level_transformations(gray):
+    assert log_transform(gray).shape == gray.shape
+    assert inverse_log_transform(gray).shape == gray.shape
+    assert gamma_transform(gray, gamma=0.7).shape == gray.shape
+    piecewise = piecewise_linear_transform(
+        gray, control_points=((0, 0), (64, 32), (255, 255))
+    )
+    assert piecewise.shape == gray.shape
+    sliced = gray_level_slicing(gray, 16, 31, preserve_background=False)
+    assert set(np.unique(sliced)).issubset({0, 255})
+    assert np.all(sliced[:, 16:32] == 255)
+
+
 def test_histogram_equalization_and_dct_roundtrip(gray):
     equalized = histogram_equalization(gray)
     restored = dct_inverse(dct_transform(gray))
@@ -86,6 +101,8 @@ def test_enhancement_filters_and_glcm(gray):
 def test_restoration_metrics_and_line_fit(gray):
     assert mean_squared_error(gray, gray) == 0
     assert root_mean_squared_error(gray, gray) == 0
+    assert np.isinf(peak_signal_to_noise_ratio(gray, gray))
+    assert peak_signal_to_noise_ratio(gray, gray + 1) == pytest.approx(48.13, abs=0.02)
     slope, intercept = least_squares_line([0, 1, 2], [1, 3, 5])
     assert slope == pytest.approx(2)
     assert intercept == pytest.approx(1)

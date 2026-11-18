@@ -18,6 +18,17 @@ def root_mean_squared_error(original, restored):
     return float(np.sqrt(mean_squared_error(original, restored)))
 
 
+
+def peak_signal_to_noise_ratio(original, restored, data_range=255.0):
+    """Compute PSNR in decibels for same-shaped images."""
+    if data_range <= 0:
+        raise ValueError("data_range must be positive.")
+    mse = mean_squared_error(original, restored)
+    if mse == 0:
+        return float("inf")
+    return float(10.0 * np.log10((data_range ** 2) / mse))
+
+
 def least_squares_line(x_values, y_values):
     """Fit y = slope*x + intercept by the least-squares method."""
     x = np.asarray(x_values, dtype=np.float64).ravel()

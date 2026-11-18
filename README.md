@@ -43,7 +43,11 @@ flowchart TD
     M --> K
 ~~~
 
-See **[all module flowcharts](docs/flowcharts.md)** for the detailed learning diagrams.
+See the **[complete learning guide](docs/index.md)** for the expanded lessons, worked equations, comparisons, self-check questions and module-specific diagrams. The [flowchart collection](docs/flowcharts.md) provides a separate visual overview.
+
+## Detailed theory guides
+
+The module pages are full lessons rather than short topic summaries. Each includes concept explanations, equations, comparison tables, Mermaid diagrams, worked examples, links to related code, common mistakes and self-check questions. Start at the [learning guide index](docs/index.md).
 
 ## Syllabus coverage: all five modules
 
@@ -60,8 +64,8 @@ See **[all module flowcharts](docs/flowcharts.md)** for the detailed learning di
 ### 1. Clone the repository
 
 ~~~bash
-git clone https://github.com/Chetan-code-lrca/low-level-image-feature-extraction.git
-cd low-level-image-feature-extraction
+git clone https://github.com/Chetan-code-lrca/Digital_Image_Processing.git
+cd Digital_Image_Processing
 ~~~
 
 ### 2. Create a virtual environment
@@ -130,9 +134,9 @@ The implementations are organized by syllabus module under **src/dip/**.
 
 | File | Main functions |
 |---|---|
-| `module1_representation.py` | Sampling/quantization, colour models, negative/log/gamma, histogram equalization/specification, multi-image operations, DFT, DCT, Walsh-Hadamard, Haar, KLT, SVD |
+| `module1_representation.py` | Sampling/quantization, colour models, negative/log/inverse-log/gamma, piecewise mapping, gray-level slicing, histogram equalization/specification, multi-image operations, DFT, DCT, Walsh-Hadamard, Haar, KLT, SVD |
 | `module2_enhancement.py` | Linear/nonlinear contrast, GLCM, mean/Gaussian/median/order-statistic filters, image averaging, bilateral smoothing, low/high-pass filtering, sharpening, homomorphic filtering |
-| `module3_restoration.py` | MSE/RMSE, least-squares fitting/restoration, SVD restoration, MAP restoration, homomorphic restoration, radial/tangential distortion |
+| `module3_restoration.py` | MSE/RMSE/PSNR, least-squares fitting/restoration, SVD restoration, MAP restoration, homomorphic restoration, radial/tangential distortion |
 | `module4_compression.py` | RLE, Huffman, LZW, arithmetic coding, JPEG encode/decode, vector quantization |
 | `module5_segmentation.py` | Global/Otsu/multilevel/local thresholding, region extraction, region growing, region splitting/merging, K-Means, split-and-merge |
 
@@ -173,7 +177,7 @@ Read the longer [feature extraction article](article/README.md).
 ## Repository structure
 
 ~~~text
-low-level-image-feature-extraction/
+Digital_Image_Processing/
 ├── article/                   # Original feature-extraction learning articles
 ├── data/                      # Sample data / generated sample image
 ├── docs/

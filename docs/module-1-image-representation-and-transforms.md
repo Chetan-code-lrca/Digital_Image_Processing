@@ -17,7 +17,7 @@ A digital image is a discrete two-dimensional signal. Spatial sampling determine
 | Image information / representation | image_information in src/dip/module1_representation.py |
 | Sampling and quantization | sample_and_quantize |
 | Colour representation: HSV, HSI, YCbCr, CMYK | convert_colour_models |
-| Gray-level transformations | gray_negative, log_transform, gamma_transform, threshold_image |
+| Gray-level transformations | gray_negative, log_transform, inverse_log_transform, gamma_transform, piecewise_linear_transform, gray_level_slicing, threshold_image |
 | Histogram equalization | histogram_equalization |
 | Histogram specification | histogram_specification |
 | Multi-image operations | multi_image_operations |

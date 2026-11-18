@@ -8,6 +8,7 @@
 |---|---|
 | Mean squared error | mean_squared_error |
 | Root mean squared error | root_mean_squared_error |
+| Peak signal-to-noise ratio | peak_signal_to_noise_ratio |
 | Least-squares fitting | least_squares_line |
 | Regularized least-squares restoration | least_squares_restore |
 | SVD restoration | svd_restore |
@@ -43,13 +44,14 @@ A practical restoration procedure is: (1) inspect the degradation, (2) estimate 
 ~~~python
 import cv2
 import numpy as np
-from src.dip.module3_restoration import least_squares_restore, mean_squared_error
+from src.dip.module3_restoration import least_squares_restore, mean_squared_error, peak_signal_to_noise_ratio
 
 image = cv2.imread("data/sample.jpg", cv2.IMREAD_GRAYSCALE)
 psf = np.ones((5, 5), dtype=np.float32) / 25
 blurred = cv2.filter2D(image, -1, psf)
 restored = least_squares_restore(blurred, psf, regularization=0.02)
 print("Restoration MSE:", mean_squared_error(image, restored))
+print("Restoration PSNR:", peak_signal_to_noise_ratio(image, restored), "dB")
 ~~~
 
 See [flowcharts](flowcharts.md) for the module workflow.

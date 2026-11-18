@@ -81,6 +81,50 @@ def gamma_transform(image, gamma=1.0, gain=1.0):
     return to_uint8(gain * np.power(array, gamma) * 255.0)
 
 
+def inverse_log_transform(image):
+    """Apply a normalized inverse-log (exponential) gray-level mapping."""
+    array = to_uint8(image).astype(np.float32) / 255.0
+    numerator = np.expm1(array)
+    denominator = np.expm1(1.0)
+    return np.rint(255.0 * numerator / denominator).astype(np.uint8)
+
+
+def piecewise_linear_transform(image, control_points=((0, 0), (255, 255))):
+    """Map grayscale intensities by linear interpolation between control points.
+
+    control_points is a sequence of (input_level, output_level) pairs.
+    Input levels must be strictly increasing and all coordinates must be in 0..255.
+    """
+    points = np.asarray(control_points, dtype=np.float64)
+    if points.ndim != 2 or points.shape[1] != 2 or points.shape[0] < 2:
+        raise ValueError("control_points must contain at least two (input, output) pairs.")
+    x_values, y_values = points[:, 0], points[:, 1]
+    if np.any(np.diff(x_values) <= 0):
+        raise ValueError("control-point input levels must be strictly increasing.")
+    if np.any(points < 0) or np.any(points > 255):
+        raise ValueError("control-point coordinates must be within 0..255.")
+    array = to_uint8(image)
+    mapped = np.interp(array.astype(np.float32), x_values, y_values)
+    return np.rint(np.clip(mapped, 0, 255)).astype(np.uint8)
+
+
+def gray_level_slicing(image, lower, upper, highlight=255, preserve_background=True):
+    """Highlight an inclusive grayscale interval.
+
+    If preserve_background is False, all pixels outside [lower, upper] become zero.
+    """
+    array = to_uint8(image)
+    if array.ndim != 2:
+        raise ValueError("gray_level_slicing expects a single-channel grayscale image.")
+    if not 0 <= lower <= upper <= 255:
+        raise ValueError("lower and upper must satisfy 0 <= lower <= upper <= 255.")
+    if not 0 <= highlight <= 255:
+        raise ValueError("highlight must be between 0 and 255.")
+    background = array if preserve_background else np.zeros_like(array)
+    mask = (array >= lower) & (array <= upper)
+    return np.where(mask, highlight, background).astype(np.uint8)
+
+
 def threshold_image(image, threshold=127):
     """Convert an image to a binary image using a global threshold."""
     gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

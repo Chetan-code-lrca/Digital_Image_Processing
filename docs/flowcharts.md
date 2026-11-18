@@ -1,6 +1,6 @@
 # Digital Image Processing Flowcharts
 
-These flowcharts summarize the processing logic used by the examples in this repository. Mermaid diagrams render directly on GitHub.
+These flowcharts summarize the processing logic used by the examples in this repository. Mermaid diagrams render directly on GitHub. For full explanations, equations, worked examples and parameter guidance, read the [module learning guides](index.md).
 
 ## End-to-end digital image processing workflow
 

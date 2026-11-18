@@ -1,14 +1,14 @@
 # Repository discovery and search setup
 
-The README and documentation use natural, descriptive names for the topics taught here: Digital Image Processing (DIP), image enhancement, image restoration, image compression, image segmentation, OpenCV, Python, DFT, DCT, GLCM, JPEG, Huffman coding, and image feature extraction.
+The repository is now named **Digital_Image_Processing**. Its documentation uses the course name and the actual topic vocabulary rather than generic keyword lists.
 
 ## Suggested GitHub repository description
 
-> Complete Digital Image Processing (DIP) lab in Python: OpenCV examples for image representation, enhancement, restoration, compression, segmentation, transforms, and 16 practicals.
+> Complete Digital Image Processing (DIP) lab in Python: detailed module notes, formulas, Mermaid flowcharts, OpenCV implementations and 16 practicals covering image transforms, enhancement, restoration, compression and segmentation.
 
-## Suggested GitHub topics
+## Suggested GitHub Topics
 
-Add these in the repository's **About → Topics** field (all lowercase):
+Add these in the repository's **About → Topics** field:
 
 - digital-image-processing
 - image-processing
@@ -26,19 +26,18 @@ Add these in the repository's **About → Topics** field (all lowercase):
 - feature-extraction
 - education
 
-GitHub topics help people browse repositories by subject. They must be added in repository metadata; a README cannot set them automatically.
+GitHub topics help people browse repositories by subject. They are repository metadata and are not controlled by README text.
 
-## Suggested repository name
+## Search-friendly documentation
 
-If you decide to rename the repository, a more course-discoverable name would be **digital-image-processing-lab**. Renaming is a separate GitHub repository setting and is not required for the existing clone URL to work after GitHub redirects it.
+The module pages now use clear titles and headings for the actual concepts: sampling, quantization, colour models, histogram equalization, GLCM, homomorphic filtering, MSE, MAP estimation, Huffman coding, JPEG, Otsu thresholding, region growing and split-and-merge.
 
-## Search and quality guidance
+Keep headings descriptive and explanations useful. Avoid repeating keyword lists unnaturally. Add genuine result images with meaningful alt text when you have output screenshots worth showing.
 
-- Keep the title and opening paragraph descriptive and aligned with the project contents.
-- Use separate, descriptive headings for each syllabus module.
-- Link the README directly to focused module pages and practicals.
-- Keep examples executable and tests passing; do not add repeated keyword lists or misleading claims.
-- Add genuine screenshots or result figures with useful alt text when they are available.
-- Share the project in relevant student, computer-vision, and open-source communities; search ranking cannot be guaranteed.
+## Search engines
 
-For guidance, see [GitHub repository topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics) and [Google Search Essentials](https://developers.google.com/search/docs/essentials).
+A clear repository page improves the chance that people can understand and discover the project, but neither GitHub nor a README can guarantee a Google ranking or immediate indexing.
+
+References:
+- [GitHub: Classifying your repository with topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics)
+- [Google Search Essentials](https://developers.google.com/search/docs/essentials)
