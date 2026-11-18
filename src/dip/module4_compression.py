@@ -171,7 +171,7 @@ def arithmetic_decode(encoded):
         selected = None
         for symbol in symbols:
             left, right = cumulative[symbol]
-            if Fraction(left, total) <= scaled < Fraction(right, total):
+            if Fraction(left) <= scaled < Fraction(right):
                 selected = symbol
                 span = high - low
                 high = low + span * Fraction(right, total)
