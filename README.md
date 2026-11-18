@@ -23,11 +23,12 @@ Learn and implement **image representation, colour models, gray-level transforma
 - 21 active-recall flashcards
 - A seven-day study planner and personal study sessions
 - Side-by-side comparisons of commonly confused methods
-- Python/OpenCV code snippets and a link to the complete implementation
+- A searchable code lab with 23 Python/OpenCV examples across all five modules
+- Google sign-in and user-specific cloud progress when Supabase is connected
 
 **[Open the DIP Studio setup guide](docs/dip-studio.md)** for local run and deployment instructions. The app is built with Next.js and is designed for Vercel deployment.
 
-> Progress is saved locally in the current browser. JSON export/import is available; account-based cloud sync is not part of this first release.
+> Guest progress stays in the current browser. With Supabase and Google OAuth configured, each learner's progress is saved to their own account. See [account setup](docs/auth-setup.md).
 
 ## What you can learn
 
