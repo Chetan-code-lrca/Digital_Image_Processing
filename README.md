@@ -19,8 +19,9 @@ Learn and implement **image representation, colour models, gray-level transforma
 **DIP Studio** is the interactive companion app included in this repository. It gives learners one place to study, revise and plan:
 
 - Topic-based notes and formulas across all five course modules
-- 20 multiple-choice quiz questions with explanations
-- 21 active-recall flashcards
+- A dynamic practice generator that assembles fresh MCQ and written-recall sessions from lesson summaries, key points, formulas and worked examples
+- A lesson-driven review deck with per-card spaced-repetition scheduling
+- Topic-level accuracy tracking that prioritises weak and overdue concepts
 - A seven-day study planner and personal study sessions
 - Side-by-side comparisons of commonly confused methods
 - A searchable code lab with 23 Python/OpenCV examples across all five modules
