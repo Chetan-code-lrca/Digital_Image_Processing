@@ -314,6 +314,17 @@ export default function Home() {
     (stat) => !stat.nextReviewAt || Date.parse(stat.nextReviewAt) <= Date.now(),
   ).length;
   const recentQuestionIds = saved.learning.sessions.slice(-3).flatMap((session) => session.questionIds);
+  const weakTopics = allLessons
+    .filter((lesson) => (saved.learning.topicStats[lesson.id]?.attempts ?? 0) > 0)
+    .sort((a, b) => {
+      const aStat = saved.learning.topicStats[a.id]!;
+      const bStat = saved.learning.topicStats[b.id]!;
+      const aAccuracy = aStat.correct / Math.max(1, aStat.attempts);
+      const bAccuracy = bStat.correct / Math.max(1, bStat.attempts);
+      return aAccuracy - bAccuracy || bStat.attempts - aStat.attempts;
+    })
+    .slice(0, 5);
+  const recentSessions = [...saved.learning.sessions].slice(-5).reverse();
   const currentComparison = comparisons.find((item) => item.id === comparisonId) ?? comparisons[0];
   const filteredCode = codeExamples.filter((item) => {
     const moduleMatches = codeModule === "all" || item.module === codeModule;
@@ -471,7 +482,6 @@ export default function Home() {
       ...previous,
       learning: {
         ...previous.learning,
-        topicStats: updateLearningStat(previous.learning.topicStats, currentCard.lessonId, quality),
         cardStats: updateLearningStat(previous.learning.cardStats, currentCard.id, quality),
       },
     }));
@@ -682,10 +692,36 @@ export default function Home() {
 
             <div className="practice-insights">
               <div><small>QUESTIONS ATTEMPTED</small><strong>{totalPracticeAttempts}</strong></div>
-              <div><small>OVERALL ACCURACY</small><strong>{practiceAccuracy}%</strong></div>
+              <div><small>QUIZ ACCURACY</small><strong>{practiceAccuracy}%</strong></div>
               <div><small>TOPICS DUE</small><strong>{dueTopicsCount}</strong></div>
               <div><small>COMPLETED SESSIONS</small><strong>{saved.learning.sessions.length}</strong></div>
             </div>
+
+            <section className="learning-dashboard">
+              <article className="learning-panel">
+                <div className="panel-head"><div><div className="eyebrow">ADAPTIVE PRIORITIES</div><h3>Topics to revisit</h3></div><small>Lowest quiz accuracy</small></div>
+                {weakTopics.length ? weakTopics.map((lesson)=>{
+                  const stat=saved.learning.topicStats[lesson.id]!;
+                  const accuracy=Math.round(stat.correct/Math.max(1,stat.attempts)*100);
+                  const parent=modules.find((module)=>module.id===lesson.moduleId);
+                  return <div className="mastery-row" key={lesson.id}>
+                    <div><span>{lesson.moduleId} · {lesson.title}</span><b>{accuracy}%</b></div>
+                    <div className="track"><i style={{width:accuracy+"%"}} /></div>
+                    <small>{stat.attempts} attempts · {stat.lapses} misses</small>
+                    <button onClick={()=>{setModuleId(lesson.moduleId);setTopicId(lesson.id);setView("notes");}}>Review lesson ↗</button>
+                  </div>;
+                }) : <div className="empty"><b>Your topic mastery report will appear here.</b><small>Complete a few practice questions to see which concepts need more attention.</small></div>}
+              </article>
+              <article className="learning-panel">
+                <div className="panel-head"><div><div className="eyebrow">YOUR LEARNING HISTORY</div><h3>Recent sessions</h3></div><small>{saved.learning.sessions.length} total</small></div>
+                {recentSessions.length ? recentSessions.map((session)=>(
+                  <div className="history-row" key={session.id}>
+                    <div><b>{session.module==="all"?"All modules":session.module} · {session.mode==="mixed"?"Mixed practice":session.mode==="mcq"?"MCQ practice":"Written recall"}</b><small>{new Date(session.date).toLocaleDateString("en-IN",{day:"2-digit",month:"short"})} · {session.total} questions</small></div>
+                    <strong>{session.correct}/{session.total}<small>{session.accuracy}%</small></strong>
+                  </div>
+                )) : <div className="empty"><b>No completed sessions yet.</b><small>Your recent practice results will be listed here.</small></div>}
+              </article>
+            </section>
 
             {practiceStarted && practiceQuestions.length > 0 && (
               practiceFinished ? (
