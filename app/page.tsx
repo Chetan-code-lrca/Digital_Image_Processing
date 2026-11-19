@@ -1,17 +1,51 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { modules, flashcards, quizzes, comparisons, codeExamples, type ModuleId, type Lesson } from "@/lib/content";
+import { modules, comparisons, codeExamples, type ModuleId, type Lesson } from "@/lib/content";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  buildQuestionPool,
+  buildStudyCards,
+  createEmptyLearningProgress,
+  updateLearningStat,
+  type LearningProgress,
+  type PracticeDifficulty,
+  type PracticeMode,
+  type StudyCard,
+  type StudyQuestion,
+} from "@/lib/learning-engine";
 
 type View = "home" | "notes" | "quiz" | "cards" | "planner" | "compare" | "code";
 type Task = { id: string; title: string; day: string; minutes: number; module: ModuleId; done: boolean };
-type Saved = { completed: string[]; tasks: Task[]; hours: number; goal: string };
+type Saved = { completed: string[]; tasks: Task[]; hours: number; goal: string; learning: LearningProgress };
 const KEY = "dip-studio-progress-v1";
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const accent: Record<ModuleId, string> = { M1: "violet", M2: "cyan", M3: "amber", M4: "rose", M5: "green" };
-const emptyState: Saved = { completed: [], tasks: [], hours: 2, goal: "GATE + university exams" };
+const emptyState: Saved = {
+  completed: [],
+  tasks: [],
+  hours: 2,
+  goal: "GATE + university exams",
+  learning: createEmptyLearningProgress(),
+};
+
+function normalizeSaved(data: Partial<Saved>): Saved {
+  const learning = data.learning;
+  return {
+    ...emptyState,
+    ...data,
+    completed: Array.isArray(data.completed) ? data.completed : [],
+    tasks: Array.isArray(data.tasks) ? data.tasks : [],
+    learning: {
+      ...createEmptyLearningProgress(),
+      ...(learning ?? {}),
+      topicStats: learning?.topicStats ?? {},
+      cardStats: learning?.cardStats ?? {},
+      sessions: Array.isArray(learning?.sessions) ? learning.sessions : [],
+    },
+  };
+}
 
 export default function Home() {
   const [view, setView] = useState<View>("home");
@@ -29,6 +63,16 @@ export default function Home() {
   const [checked, setChecked] = useState(false);
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(0);
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>("mixed");
+  const [practiceDifficulty, setPracticeDifficulty] = useState<PracticeDifficulty>("all");
+  const [practiceCount, setPracticeCount] = useState(10);
+  const [practiceQuestions, setPracticeQuestions] = useState<StudyQuestion[]>([]);
+  const [practiceStarted, setPracticeStarted] = useState(false);
+  const [practiceFinished, setPracticeFinished] = useState(false);
+  const [writtenAnswer, setWrittenAnswer] = useState("");
+  const [showModelAnswer, setShowModelAnswer] = useState(false);
+  const [sessionStartMs, setSessionStartMs] = useState<number | null>(null);
+  const [cardQueue, setCardQueue] = useState<"all" | "due">("due");
   const [comparisonId, setComparisonId] = useState(comparisons[0].id);
   const [codeModule, setCodeModule] = useState<"all" | ModuleId>("all");
   const [codeSearch, setCodeSearch] = useState("");
@@ -49,8 +93,8 @@ export default function Home() {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
-        const data = JSON.parse(raw) as Saved;
-        setSaved({ ...emptyState, ...data });
+        const data = JSON.parse(raw) as Partial<Saved>;
+        setSaved(normalizeSaved(data));
         setHours(data.hours ?? 2);
         setGoal(data.goal ?? emptyState.goal);
       }
@@ -80,12 +124,7 @@ export default function Home() {
           const raw = localStorage.getItem(KEY);
           if (raw) {
             const data = JSON.parse(raw) as Partial<Saved>;
-            setSaved({
-              ...emptyState,
-              ...data,
-              completed: Array.isArray(data.completed) ? data.completed : [],
-              tasks: Array.isArray(data.tasks) ? data.tasks : []
-            });
+            setSaved(normalizeSaved(data));
             setHours(data.hours ?? 2);
             setGoal(data.goal ?? emptyState.goal);
           } else {
@@ -146,12 +185,7 @@ export default function Home() {
 
       if (data?.progress) {
         const progress = data.progress as Partial<Saved>;
-        setSaved({
-          ...emptyState,
-          ...progress,
-          completed: Array.isArray(progress.completed) ? progress.completed : [],
-          tasks: Array.isArray(progress.tasks) ? progress.tasks : []
-        });
+        setSaved(normalizeSaved(progress));
         setHours(progress.hours ?? 2);
         setGoal(progress.goal ?? emptyState.goal);
         // Do not leave a shared guest record available to a different account on this device.
@@ -166,12 +200,7 @@ export default function Home() {
         if (raw) {
           try {
             const progress = JSON.parse(raw) as Partial<Saved>;
-            setSaved({
-              ...emptyState,
-              ...progress,
-              completed: Array.isArray(progress.completed) ? progress.completed : [],
-              tasks: Array.isArray(progress.tasks) ? progress.tasks : []
-            });
+            setSaved(normalizeSaved(progress));
             setHours(progress.hours ?? 2);
             setGoal(progress.goal ?? emptyState.goal);
             localStorage.setItem(accountKey, JSON.stringify({ ...emptyState, ...progress }));
@@ -260,10 +289,31 @@ export default function Home() {
   const nextLesson = allLessons.find((lesson) => !saved.completed.includes(lesson.id)) ?? allLessons[0];
   const filteredLessons = allLessons.filter((lesson) => (lesson.title + " " + lesson.summary + " " + lesson.moduleTitle).toLowerCase().includes(search.toLowerCase()));
   const visibleLessons = search ? filteredLessons : currentModule.topics.map((lesson) => ({ ...lesson, moduleId, moduleTitle: currentModule.title }));
-  const activeCards = flashcards.filter((card) => cardModule === "all" || card.module === cardModule);
-  const currentCard = activeCards[cardIndex % Math.max(activeCards.length, 1)];
-  const activeQuiz = quizzes.filter((question) => quizModule === "all" || question.module === quizModule);
-  const currentQuestion = activeQuiz[quizIndex % Math.max(activeQuiz.length, 1)];
+  const activeCards = useMemo(
+    () => buildStudyCards(modules, cardModule, saved.learning.cardStats, cardQueue),
+    [cardModule, cardQueue, saved.learning.cardStats],
+  );
+  const allStudyCards = useMemo(
+    () => buildStudyCards(modules, "all", saved.learning.cardStats, "all"),
+    [saved.learning.cardStats],
+  );
+  const dueCardsCount = useMemo(
+    () => buildStudyCards(modules, "all", saved.learning.cardStats, "due").length,
+    [saved.learning.cardStats],
+  );
+  const currentCard: StudyCard | undefined = activeCards[cardIndex];
+  const currentQuestion: StudyQuestion | undefined = practiceQuestions[quizIndex];
+  const questionPoolSize = useMemo(
+    () => buildQuestionPool(modules, quizModule, practiceMode, practiceDifficulty, saved.learning.topicStats).length,
+    [quizModule, practiceMode, practiceDifficulty, saved.learning.topicStats],
+  );
+  const totalPracticeAttempts = Object.values(saved.learning.topicStats).reduce((sum, stat) => sum + stat.attempts, 0);
+  const totalPracticeCorrect = Object.values(saved.learning.topicStats).reduce((sum, stat) => sum + stat.correct, 0);
+  const practiceAccuracy = totalPracticeAttempts ? Math.round((totalPracticeCorrect / totalPracticeAttempts) * 100) : 0;
+  const dueTopicsCount = Object.values(saved.learning.topicStats).filter(
+    (stat) => !stat.nextReviewAt || Date.parse(stat.nextReviewAt) <= Date.now(),
+  ).length;
+  const recentQuestionIds = saved.learning.sessions.slice(-3).flatMap((session) => session.questionIds);
   const currentComparison = comparisons.find((item) => item.id === comparisonId) ?? comparisons[0];
   const filteredCode = codeExamples.filter((item) => {
     const moduleMatches = codeModule === "all" || item.module === codeModule;
@@ -301,17 +351,133 @@ export default function Home() {
     catch { notify("Clipboard access was blocked by your browser."); }
   }
   function resetQuizModule(value: "all" | ModuleId) {
-    setQuizModule(value); setQuizIndex(0); setAnswer(null); setChecked(false); setScore(0); setAnswered(0);
+    setQuizModule(value);
+    setPracticeStarted(false);
+    setPracticeFinished(false);
+    setPracticeQuestions([]);
+    setQuizIndex(0);
+    setAnswer(null);
+    setChecked(false);
+    setScore(0);
+    setAnswered(0);
+    setWrittenAnswer("");
+    setShowModelAnswer(false);
   }
+
+  function startPractice() {
+    const generated = buildQuestionPool(
+      modules,
+      quizModule,
+      practiceMode,
+      practiceDifficulty,
+      saved.learning.topicStats,
+      recentQuestionIds,
+    );
+    const selected = practiceCount > 0 ? generated.slice(0, practiceCount) : generated;
+    if (!selected.length) {
+      notify("No questions match this selection. Try another module or question style.");
+      return;
+    }
+    setPracticeQuestions(selected);
+    setQuizIndex(0);
+    setAnswer(null);
+    setChecked(false);
+    setScore(0);
+    setAnswered(0);
+    setWrittenAnswer("");
+    setShowModelAnswer(false);
+    setPracticeFinished(false);
+    setPracticeStarted(true);
+    setSessionStartMs(Date.now());
+  }
+
+  function completePracticeSession(finalAnswered: number, finalScore: number) {
+    setPracticeFinished(true);
+    const session = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      module: quizModule,
+      mode: practiceMode,
+      total: finalAnswered,
+      correct: finalScore,
+      accuracy: finalAnswered ? Math.round((finalScore / finalAnswered) * 100) : 0,
+      durationSeconds: sessionStartMs ? Math.max(0, Math.round((Date.now() - sessionStartMs) / 1000)) : 0,
+      questionIds: practiceQuestions.map((question) => question.id),
+      topicIds: Array.from(new Set(practiceQuestions.map((question) => question.lessonId))),
+    };
+    setSaved((previous) => ({
+      ...previous,
+      learning: {
+        ...previous.learning,
+        sessions: [...previous.learning.sessions, session].slice(-50),
+      },
+    }));
+  }
+
   function checkAnswer() {
-    if (answer === null || checked) return;
+    if (answer === null || checked || !currentQuestion || currentQuestion.kind !== "mcq") return;
+    const isCorrect = answer === currentQuestion.answerIndex;
     setChecked(true);
     setAnswered((count) => count + 1);
-    if (answer === currentQuestion.answer) setScore((count) => count + 1);
+    if (isCorrect) setScore((count) => count + 1);
+    setSaved((previous) => ({
+      ...previous,
+      learning: {
+        ...previous.learning,
+        topicStats: updateLearningStat(previous.learning.topicStats, currentQuestion.lessonId, isCorrect ? 4 : 1),
+      },
+    }));
   }
+
   function nextQuestion() {
-    setQuizIndex((index) => (index + 1) % activeQuiz.length);
-    setAnswer(null); setChecked(false);
+    if (quizIndex + 1 >= practiceQuestions.length) {
+      completePracticeSession(answered, score);
+      return;
+    }
+    setQuizIndex((index) => index + 1);
+    setAnswer(null);
+    setChecked(false);
+    setWrittenAnswer("");
+    setShowModelAnswer(false);
+  }
+
+  function markWrittenAnswer(gotIt: boolean) {
+    if (!currentQuestion || currentQuestion.kind !== "written") return;
+    const finalAnswered = answered + 1;
+    const finalScore = score + (gotIt ? 1 : 0);
+    setAnswered(finalAnswered);
+    setScore(finalScore);
+    setSaved((previous) => ({
+      ...previous,
+      learning: {
+        ...previous.learning,
+        topicStats: updateLearningStat(previous.learning.topicStats, currentQuestion.lessonId, gotIt ? 4 : 1),
+      },
+    }));
+    if (quizIndex + 1 >= practiceQuestions.length) {
+      completePracticeSession(finalAnswered, finalScore);
+      return;
+    }
+    setQuizIndex((index) => index + 1);
+    setWrittenAnswer("");
+    setShowModelAnswer(false);
+    setAnswer(null);
+    setChecked(false);
+  }
+
+  function rateCard(quality: number) {
+    if (!currentCard) return;
+    setSaved((previous) => ({
+      ...previous,
+      learning: {
+        ...previous.learning,
+        topicStats: updateLearningStat(previous.learning.topicStats, currentCard.lessonId, quality),
+        cardStats: updateLearningStat(previous.learning.cardStats, currentCard.id, quality),
+      },
+    }));
+    setCardIndex(0);
+    setFlipped(false);
+    notify(quality < 3 ? "Card scheduled for another review soon." : "Review saved. Your next interval has been scheduled.");
   }
   function addTask() {
     if (!newTask.trim()) return;
@@ -374,7 +540,7 @@ export default function Home() {
       const payload = JSON.parse(await file.text());
       const data = payload.saved ?? payload;
       if (!Array.isArray(data.completed) || !Array.isArray(data.tasks)) throw new Error("Invalid backup");
-      setSaved({ ...emptyState, ...data });
+      setSaved(normalizeSaved(data));
       setHours(data.hours ?? 2); setGoal(data.goal ?? emptyState.goal);
       notify("Progress backup imported.");
     } catch { notify("That file is not a valid DIP Studio backup."); }
@@ -465,8 +631,8 @@ export default function Home() {
             <section className="stats">
               <div className="stat"><span>COURSE PROGRESS</span><strong>{progress}<small>%</small></strong><div className="track"><i style={{width:progress+"%"}} /></div><small>{saved.completed.length} / {totalLessons} topics completed</small></div>
               <div className="stat"><span>LEARNING MODULES</span><strong>05</strong><small>Complete university syllabus</small><div className="mini-bars">{modules.map((module)=><i key={module.id} className={module.id.toLowerCase()} style={{height:Math.max(8,getModuleProgress(module.id)*.42)+"px"}} />)}</div></div>
-              <div className="stat"><span>REVISION CARDS</span><strong>{flashcards.length}</strong><small>Ready for active recall</small><button onClick={()=>navigate("cards")}>Start revising ↗</button></div>
-              <div className="stat"><span>QUIZ QUESTIONS</span><strong>{quizzes.length}</strong><small>Check what you actually know</small><button onClick={()=>navigate("quiz")}>Test yourself ↗</button></div>
+              <div className="stat"><span>GENERATED REVIEW CARDS</span><strong>{allStudyCards.length}</strong><small>{dueCardsCount} due for review</small><button onClick={()=>navigate("cards")}>Start revising ↗</button></div>
+              <div className="stat"><span>DYNAMIC QUESTION POOL</span><strong>{questionPoolSize}</strong><small>{totalPracticeAttempts} attempts · {practiceAccuracy}% accuracy</small><button onClick={()=>navigate("quiz")}>Practice now ↗</button></div>
             </section>
             <div className="section-head"><div><div className="eyebrow">THE LEARNING PATH</div><h2>Your five modules</h2><p>Follow the sequence or jump directly to a topic you need.</p></div><button className="quiet" onClick={()=>navigate("notes")}>Explore all notes ↗</button></div>
             <section className="module-grid">{modules.map((module)=><button key={module.id} className={"module-card "+module.id.toLowerCase()} onClick={()=>openModule(module.id)}><div className="module-meta"><span>MODULE {module.number}</span><b>↗</b></div><div className="module-art"><i /><i /><b>{module.number}</b></div><h3>{module.title}</h3><p>{module.subtitle}</p><div className="module-foot"><span>{module.topics.length} topics</span><span>{getModuleProgress(module.id)}% complete</span></div><div className="track"><i style={{width:getModuleProgress(module.id)+"%"}} /></div></button>)}</section>
@@ -496,15 +662,115 @@ export default function Home() {
           </>}
 
           {view === "quiz" && <>
-            <PageIntro eyebrow="RETRIEVAL PRACTICE" title={<>Test your <em>understanding.</em></>} desc="Short, focused questions across the full DIP syllabus. Check the explanation after each answer." />
-            <div className="toolbar"><span>QUESTION SET</span><div className="pills"><button className={quizModule==="all"?"active":""} onClick={()=>resetQuizModule("all")}>All modules</button>{modules.map((module)=><button key={module.id} className={quizModule===module.id?"active":""} onClick={()=>resetQuizModule(module.id)}>{module.number}</button>)}</div><small>{activeQuiz.length} QUESTIONS</small></div>
-            <div className="quiz-layout"><section className="quiz-card"><div className="quiz-meta"><span className={"tag "+currentQuestion.module.toLowerCase()}>{currentQuestion.module} · {modules.find((module)=>module.id===currentQuestion.module)?.title}</span><small>QUESTION {quizIndex+1} / {activeQuiz.length}</small></div><div className="track"><i style={{width:((quizIndex+1)/activeQuiz.length*100)+"%"}} /></div><h2>{currentQuestion.question}</h2><div className="answers">{currentQuestion.options.map((option,index)=><button key={option} disabled={checked} className={(answer===index?"chosen ":"")+(checked&&index===currentQuestion.answer?"correct ":"")+(checked&&answer===index&&index!==currentQuestion.answer?"wrong":"")} onClick={()=>setAnswer(index)}><i>{String.fromCharCode(65+index)}</i><span>{option}</span><b>{checked&&index===currentQuestion.answer?"✓":answer===index?"●":""}</b></button>)}</div>{checked&&<div className={"feedback "+(answer===currentQuestion.answer?"good":"bad")}><b>{answer===currentQuestion.answer?"That's right.":"Not quite — review the concept."}</b><p>{currentQuestion.explanation}</p></div>}<div className="quiz-footer"><small>{answered>0?"SESSION SCORE "+score+" / "+answered:"SELECT ONE ANSWER"}</small>{!checked?<button className="primary" disabled={answer===null} onClick={checkAnswer}>Check answer →</button>:<button className="primary" onClick={nextQuestion}>Next question →</button>}</div></section><aside className="quiz-note"><span>✳</span><h3>Recall first.<br /><em>Then check.</em></h3><p>Try retrieving the answer before reading the explanation. This is more useful than only rereading a note.</p><hr /><small>YOUR SESSION</small><strong>{score}<i> / {answered}</i></strong><div className="track"><i style={{width:(answered?score/answered*100:0)+"%"}} /></div><button onClick={()=>{setQuizIndex(0);setAnswer(null);setChecked(false);setScore(0);setAnswered(0);}}>Reset session ↻</button></aside></div>
+            <PageIntro eyebrow="ADAPTIVE RETRIEVAL PRACTICE" title={<>Practice that <em>keeps changing.</em></>} desc="Questions are generated from the five module lessons, key points, formulas and worked examples. Your weak and overdue topics are prioritised in later sessions." />
+            <section className="practice-setup">
+              <div className="practice-setup-head">
+                <div><div className="eyebrow">BUILD A PRACTICE SESSION</div><h2>Choose what to work on</h2><p>Every session is assembled from your course notes. Change the settings to create a different question set.</p></div>
+                <span className="practice-spark">✳</span>
+              </div>
+              <div className="practice-controls">
+                <label><span>MODULE</span><select value={quizModule} onChange={(event)=>resetQuizModule(event.target.value as "all" | ModuleId)}><option value="all">All five modules</option>{modules.map((module)=><option key={module.id} value={module.id}>{module.number} · {module.title}</option>)}</select></label>
+                <label><span>QUESTION STYLE</span><select value={practiceMode} onChange={(event)=>setPracticeMode(event.target.value as PracticeMode)}><option value="mixed">Mixed · MCQ + written recall</option><option value="mcq">Multiple choice</option><option value="written">Written recall</option></select></label>
+                <label><span>DIFFICULTY</span><select value={practiceDifficulty} onChange={(event)=>setPracticeDifficulty(event.target.value as PracticeDifficulty)}><option value="all">All levels</option><option value="starter">Starter · understanding</option><option value="core">Core · explain concepts</option><option value="challenge">Challenge · formulas and examples</option></select></label>
+                <label><span>QUESTION COUNT</span><select value={practiceCount} onChange={(event)=>setPracticeCount(Number(event.target.value))}><option value={5}>5 questions</option><option value={10}>10 questions</option><option value={15}>15 questions</option><option value={20}>20 questions</option><option value={0}>All available</option></select></label>
+              </div>
+              <div className="practice-setup-footer">
+                <div><strong>{questionPoolSize}</strong><span>questions available for this selection</span><small>Fresh option order · recent questions deprioritised · weaker topics first</small></div>
+                <button className="primary" onClick={startPractice}>Generate practice session →</button>
+              </div>
+            </section>
+
+            <div className="practice-insights">
+              <div><small>QUESTIONS ATTEMPTED</small><strong>{totalPracticeAttempts}</strong></div>
+              <div><small>OVERALL ACCURACY</small><strong>{practiceAccuracy}%</strong></div>
+              <div><small>TOPICS DUE</small><strong>{dueTopicsCount}</strong></div>
+              <div><small>COMPLETED SESSIONS</small><strong>{saved.learning.sessions.length}</strong></div>
+            </div>
+
+            {practiceStarted && practiceQuestions.length > 0 && (
+              practiceFinished ? (
+                <section className="practice-result">
+                  <div className="eyebrow">SESSION COMPLETE</div>
+                  <h2>{score} <span>/ {answered}</span></h2>
+                  <p>{answered ? Math.round(score / answered * 100) : 0}% accuracy in this session. Your topic performance has been saved and will shape the next set.</p>
+                  <div className="practice-result-actions">
+                    <button className="primary" onClick={startPractice}>Generate another session ↗</button>
+                    <button className="quiet" onClick={()=>navigate("cards")}>Review due cards</button>
+                  </div>
+                </section>
+              ) : currentQuestion && (
+                <div className="quiz-layout dynamic-quiz-layout">
+                  <section className="quiz-card">
+                    <div className="quiz-meta">
+                      <span className={"tag "+currentQuestion.moduleId.toLowerCase()}>{currentQuestion.moduleId} · {currentQuestion.moduleTitle}</span>
+                      <small>{String(quizIndex+1).padStart(2,"0")} / {practiceQuestions.length}</small>
+                    </div>
+                    <div className="track"><i style={{width:((quizIndex+1)/practiceQuestions.length*100)+"%"}} /></div>
+                    <div className="question-context"><span>{currentQuestion.difficulty.toUpperCase()}</span><span>·</span><span>{currentQuestion.kind === "mcq" ? "MULTIPLE CHOICE" : "WRITTEN RECALL"}</span><span>·</span><span>{currentQuestion.lessonTitle}</span></div>
+                    <h2>{currentQuestion.prompt}</h2>
+
+                    {currentQuestion.kind === "mcq" ? (
+                      <>
+                        <div className="answers">{currentQuestion.options?.map((option,index)=><button key={option} disabled={checked} className={(answer===index?"chosen ":"")+(checked&&index===currentQuestion.answerIndex?"correct ":"")+(checked&&answer===index&&index!==currentQuestion.answerIndex?"wrong":"")} onClick={()=>setAnswer(index)}><i>{String.fromCharCode(65+index)}</i><span>{option}</span><b>{checked&&index===currentQuestion.answerIndex?"✓":answer===index?"●":""}</b></button>)}</div>
+                        {checked && <div className={"feedback "+(answer===currentQuestion.answerIndex?"good":"bad")}><b>{answer===currentQuestion.answerIndex?"Correct.":"Review this topic."}</b><p>{currentQuestion.explanation}</p><small>LESSON SOURCE: {currentQuestion.sourceText}</small></div>}
+                        <div className="quiz-footer"><small>{answered ? "SESSION SCORE "+score+" / "+answered : "SELECT ONE ANSWER"}</small>{!checked?<button className="primary" disabled={answer===null} onClick={checkAnswer}>Check answer →</button>:<button className="primary" onClick={nextQuestion}>{quizIndex+1===practiceQuestions.length?"Finish session":"Next question"} →</button>}</div>
+                      </>
+                    ) : (
+                      <>
+                        <textarea className="written-response" value={writtenAnswer} onChange={(event)=>setWrittenAnswer(event.target.value)} placeholder="Write your explanation here before revealing the lesson guide…" rows={5} />
+                        {!showModelAnswer ? (
+                          <button className="primary reveal-answer" onClick={()=>setShowModelAnswer(true)}>Reveal lesson guide →</button>
+                        ) : (
+                          <div className="written-guide"><small>COMPARE WITH THESE COURSE NOTES</small><pre>{currentQuestion.answerText}</pre><p>{currentQuestion.explanation}</p><div className="self-grade"><button onClick={()=>markWrittenAnswer(true)}>I could explain it <span>✓</span></button><button onClick={()=>markWrittenAnswer(false)}>Need to revise <span>↻</span></button></div></div>
+                        )}
+                      </>
+                    )}
+                    <div className="question-source"><span>BASED ON COURSE TOPIC</span><button onClick={()=>{setModuleId(currentQuestion.moduleId);setTopicId(currentQuestion.lessonId);setView("notes");}}>Open lesson notes ↗</button></div>
+                  </section>
+                  <aside className="quiz-note">
+                    <span>✳</span><h3>Learn from<br /><em>each attempt.</em></h3>
+                    <p>Correct answers increase the topic's mastery signal. Missed questions return sooner, and overdue topics are prioritised in future sessions.</p>
+                    <hr /><small>THIS SESSION</small><strong>{score}<i> / {answered}</i></strong><div className="track"><i style={{width:(answered?score/answered*100:0)+"%"}} /></div>
+                    <div className="session-topic"><small>CURRENT TOPIC</small><b>{currentQuestion.lessonTitle}</b><span>{currentQuestion.moduleTitle}</span></div>
+                    <button onClick={()=>{setPracticeStarted(false);setPracticeFinished(false);}}>Exit session ↗</button>
+                  </aside>
+                </div>
+              )
+            )}
+
+            {!practiceStarted && (
+              <div className="practice-empty">
+                <span>⌁</span><strong>Your next practice set is waiting.</strong>
+                <p>Pick a module, select a question style and generate a new session from the complete lesson library.</p>
+              </div>
+            )}
           </>}
 
           {view === "cards" && <>
-            <PageIntro eyebrow="ACTIVE RECALL" title={<>Remember what <em>matters.</em></>} desc="Revisit definitions, formulas and core differences without looking at the answer first." />
-            <div className="toolbar"><div className="pills"><button className={cardModule==="all"?"active":""} onClick={()=>{setCardModule("all");setCardIndex(0);setFlipped(false);}}>All cards</button>{modules.map((module)=><button key={module.id} className={cardModule===module.id?"active":""} onClick={()=>{setCardModule(module.id);setCardIndex(0);setFlipped(false);}}>{module.number}</button>)}</div><small>{activeCards.length} CARDS IN THIS DECK</small></div>
-            <div className="flash-stage"><small className="flash-count">{String(cardIndex+1).padStart(2,"0")} <i>/ {String(activeCards.length).padStart(2,"0")}</i></small><button className={"flashcard "+(flipped?"flipped":"")} onClick={()=>setFlipped((value)=>!value)}><div className="flash-meta"><span>{currentCard.module} · {modules.find((module)=>module.id===currentCard.module)?.title}</span><span>{flipped?"ANSWER":"PROMPT"}</span></div>{flipped?<div className="flash-body"><small>THE EXPLANATION</small><p>{currentCard.back}</p></div>:<div className="flash-body"><small>QUICK RECALL</small><h2>{currentCard.front}</h2></div>}<div className="flash-meta bottom"><span>CLICK TO {flipped?"VIEW QUESTION":"REVEAL ANSWER"}</span><span>↻</span></div></button><div className="flash-actions"><button onClick={()=>{setCardIndex((index)=>(index-1+activeCards.length)%activeCards.length);setFlipped(false);}}>← Previous</button><button className="primary" onClick={()=>{setCardIndex((index)=>(index+1)%activeCards.length);setFlipped(false);}}>Next card →</button></div><p className="flash-tip">Try to say the answer out loud before you flip the card.</p></div>
+            <PageIntro eyebrow="SPACED REPETITION" title={<>A review deck that <em>adapts.</em></>} desc="Cards are built from every lesson, formula and worked example. Rate how well you recalled each one and the review scheduler sets the next interval." />
+            <div className="toolbar review-toolbar">
+              <div className="pills">
+                <button className={cardQueue==="due"?"active":""} onClick={()=>{setCardQueue("due");setCardIndex(0);setFlipped(false);}}>Due now ({dueCardsCount})</button>
+                <button className={cardQueue==="all"?"active":""} onClick={()=>{setCardQueue("all");setCardIndex(0);setFlipped(false);}}>All cards ({allStudyCards.length})</button>
+                {modules.map((module)=><button key={module.id} className={cardModule===module.id?"active":""} onClick={()=>{setCardModule(module.id);setCardIndex(0);setFlipped(false);}}>{module.number}</button>)}
+                <button className={cardModule==="all"?"active":""} onClick={()=>{setCardModule("all");setCardIndex(0);setFlipped(false);}}>All modules</button>
+              </div>
+              <small>{activeCards.length} CARDS IN THIS QUEUE</small>
+            </div>
+            {currentCard ? (
+              <div className="flash-stage">
+                <small className="flash-count">{String(cardIndex+1).padStart(2,"0")} <i>/ {String(activeCards.length).padStart(2,"0")}</i></small>
+                <button className={"flashcard "+(flipped?"flipped":"")} onClick={()=>setFlipped((value)=>!value)}>
+                  <div className="flash-meta"><span>{currentCard.moduleId} · {currentCard.moduleTitle}</span><span>{flipped?"ANSWER":currentCard.kind.toUpperCase()}</span></div>
+                  <div className="flash-body">{flipped?<><small>LESSON GUIDE · {currentCard.lessonTitle}</small><p>{currentCard.back}</p></>:<><small>ACTIVE RECALL · {currentCard.lessonTitle}</small><h2>{currentCard.front}</h2></>}</div>
+                  <div className="flash-meta bottom"><span>CLICK TO {flipped?"VIEW PROMPT":"REVEAL LESSON GUIDE"}</span><span>↻</span></div>
+                </button>
+                {flipped && <div className="flash-rating"><small>HOW WELL DID YOU RECALL IT?</small><div><button onClick={()=>rateCard(1)}><b>Again</b><span>1 day</span></button><button onClick={()=>rateCard(3)}><b>Hard</b><span>Short interval</span></button><button onClick={()=>rateCard(4)}><b>Good</b><span>Normal interval</span></button><button onClick={()=>rateCard(5)}><b>Easy</b><span>Long interval</span></button></div></div>}
+                <p className="flash-tip">New cards and missed cards appear before topics you already know. Review records are saved with your learner progress.</p>
+              </div>
+            ) : (
+              <div className="practice-empty"><span>✓</span><strong>No cards are due in this queue.</strong><p>Switch to All cards to study ahead. Your next review dates are saved automatically.</p><button className="primary" onClick={()=>{setCardQueue("all");setCardIndex(0);}}>Browse all cards →</button></div>
+            )}
           </>}
 
           {view === "planner" && <>
