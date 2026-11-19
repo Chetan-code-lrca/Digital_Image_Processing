@@ -703,7 +703,6 @@ export default function Home() {
                 {weakTopics.length ? weakTopics.map((lesson)=>{
                   const stat=saved.learning.topicStats[lesson.id]!;
                   const accuracy=Math.round(stat.correct/Math.max(1,stat.attempts)*100);
-                  const parent=modules.find((module)=>module.id===lesson.moduleId);
                   return <div className="mastery-row" key={lesson.id}>
                     <div><span>{lesson.moduleId} · {lesson.title}</span><b>{accuracy}%</b></div>
                     <div className="track"><i style={{width:accuracy+"%"}} /></div>
