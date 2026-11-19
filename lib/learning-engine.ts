@@ -178,7 +178,7 @@ export function buildQuestionPool(
           "challenge",
           "Which equation or mathematical relationship is associated with “" + lesson.title + "”?",
           lesson.formula,
-          other.map((candidate) => candidate.lesson.formula),
+          other.map((candidate) => candidate.lesson.formula).filter((value): value is string => Boolean(value)),
           lesson.formula,
           "This is the formula shown in " + lesson.title + ". " + lesson.takeaway,
           lesson.formula,
@@ -191,7 +191,7 @@ export function buildQuestionPool(
           "challenge",
           "Which worked example is used to illustrate “" + lesson.title + "”?",
           lesson.example,
-          other.map((candidate) => candidate.lesson.example),
+          other.map((candidate) => candidate.lesson.example).filter((value): value is string => Boolean(value)),
           lesson.example,
           "The example in this topic is: " + lesson.example,
           lesson.example,
@@ -199,7 +199,9 @@ export function buildQuestionPool(
       }
     }
 
-    if (includeWritten && (difficulty === "all" || difficulty === "core" || difficulty === "challenge")) {
+    if (includeWritten) {
+      const writtenDifficulty: Exclude<PracticeDifficulty, "all"> =
+        difficulty === "all" ? "core" : difficulty;
       const corePoints = lesson.points.slice(0, 3).map((point, index) => (index + 1) + ". " + point).join("\n");
       const answer = [
         lesson.summary,
@@ -208,6 +210,11 @@ export function buildQuestionPool(
         lesson.example ? "Example: " + lesson.example : "",
         "Key takeaway: " + lesson.takeaway,
       ].filter(Boolean).join("\n\n");
+      const prompt = writtenDifficulty === "starter"
+        ? "In one or two sentences, state the main idea of “" + lesson.title + "”."
+        : writtenDifficulty === "challenge"
+          ? "Explain “" + lesson.title + "” and connect its main idea to a formula, worked example or practical consequence from the lesson."
+          : "Without looking at your notes, explain “" + lesson.title + "” in your own words. Include the central idea and at least two important details.";
       questions.push({
         id: lesson.id + ":written",
         lessonId: lesson.id,
@@ -215,8 +222,8 @@ export function buildQuestionPool(
         moduleTitle,
         lessonTitle: lesson.title,
         kind: "written",
-        difficulty: "core",
-        prompt: "Without looking at your notes, explain “" + lesson.title + "” in your own words. Include the central idea and at least two important details.",
+        difficulty: writtenDifficulty,
+        prompt,
         answerText: answer,
         explanation: "Compare your response with the lesson guide. Look for the central idea, the key points and the takeaway.",
         sourceText: lesson.summary,
